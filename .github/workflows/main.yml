@@ -1,1 +1,58 @@
+name: Android APK
+on: [push, workflow_dispatch]
 
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Supabase anahtarlarini kontrol et
+        env:
+          URL: ${{ secrets.SUPABASE_URL }}
+          KEY: ${{ secrets.SUPABASE_KEY }}
+        run: |
+          if [ -z "$URL" ] || [ -z "$KEY" ]; then
+            echo "::error::SUPABASE_URL ve SUPABASE_KEY secret olarak eklenmemis (Settings > Secrets and variables > Actions)"
+            exit 1
+          fi
+
+      - name: Paketi ac ve Expo projesi olustur
+        run: |
+          unzip -q okindo-paket.zip
+          npx --yes create-expo-app@latest app --template blank --no-install
+          cd okindo-paket/android-uygulama
+          cp -r App.js config.js app.json lib data assets ../../app/
+
+      - name: Anahtarlari yaz
+        env:
+          URL: ${{ secrets.SUPABASE_URL }}
+          KEY: ${{ secrets.SUPABASE_KEY }}
+        run: |
+          cd app
+          sed -i "s|BURAYA_PROJECT_URL|$URL|; s|BURAYA_ANON_PUBLIC_KEY|$KEY|" config.js
+
+      - name: Paketleri kur
+        run: |
+          cd app
+          npm install
+          npx expo install @supabase/supabase-js @react-native-async-storage/async-storage react-native-url-polyfill
+
+      - name: APK derle
+        run: |
+          cd app
+          npx expo prebuild --platform android
+          cd android
+          ./gradlew assembleRelease --no-daemon
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: okindo-apk
+          path: app/android/app/build/outputs/apk/release/app-release.apk
