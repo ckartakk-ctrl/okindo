@@ -1,0 +1,52 @@
+{
+  "expo": {
+    "name": "okindo",
+    "slug": "okindo",
+    "scheme": "okindo",
+    "version": "0.3.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "ios": {
+      "bundleIdentifier": "com.okindo.app",
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Adrese vardığını kaydetmek ve adresini haritada bulmak için konumunu kullanıyoruz.",
+        "NSCameraUsageDescription": "İşin başlangıç ve bitiş fotoğrafını çekmek için kamerayı kullanıyoruz.",
+        "NSPhotoLibraryUsageDescription": "Fiş ve iş fotoğraflarını eklemek için galerini kullanıyoruz."
+      }
+    },
+    "android": {
+      "package": "com.okindo.app",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "CAMERA"
+      ],
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#13806F"
+      },
+      "softwareKeyboardLayoutMode": "pan"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Adrese vardığını kaydetmek ve adresini haritada bulmak için konumunu kullanıyoruz."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "İşin başlangıç ve bitiş fotoğrafını çekmek için kamerayı kullanıyoruz.",
+          "photosPermission": "Fiş ve iş fotoğraflarını eklemek için galerini kullanıyoruz."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": false
+    },
+    "icon": "./assets/icon.png"
+  }
+}
