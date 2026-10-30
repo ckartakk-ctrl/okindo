@@ -1,58 +1,72 @@
 name: Android APK
-on: [push, workflow_dispatch]
+
+# okindo-pilot.zip dosyasını açar, APK derler ve Releases bölümüne koyar.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_KEY }}
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
 
-      - name: Supabase anahtarlarini kontrol et
-        env:
-          URL: ${{ secrets.SUPABASE_URL }}
-          KEY: ${{ secrets.SUPABASE_KEY }}
+      - name: Paketi aç ve anahtarları yaz
         run: |
-          if [ -z "$URL" ] || [ -z "$KEY" ]; then
-            echo "::error::SUPABASE_URL ve SUPABASE_KEY secret olarak eklenmemis (Settings > Secrets and variables > Actions)"
+          if [ -z "$EXPO_PUBLIC_SUPABASE_URL" ] || [ -z "$EXPO_PUBLIC_SUPABASE_ANON_KEY" ]; then
+            echo "::error::SUPABASE_URL ve SUPABASE_KEY eklenmemiş (Settings > Secrets and variables > Actions)"
             exit 1
           fi
-
-      - name: Paketi ac ve Expo projesi olustur
-        run: |
-          unzip -q okindo-paket.zip
-          npx --yes create-expo-app@latest app --template blank --no-install
-          cd okindo-paket/android-uygulama
-          cp -r App.js config.js app.json lib data assets ../../app/
-
-      - name: Anahtarlari yaz
-        env:
-          URL: ${{ secrets.SUPABASE_URL }}
-          KEY: ${{ secrets.SUPABASE_KEY }}
-        run: |
-          cd app
-          sed -i "s|BURAYA_PROJECT_URL|$URL|; s|BURAYA_ANON_PUBLIC_KEY|$KEY|" config.js
+          unzip -q okindo-pilot.zip -d derleme
+          printf 'EXPO_PUBLIC_SUPABASE_URL=%s\nEXPO_PUBLIC_SUPABASE_ANON_KEY=%s\n' \
+            "$EXPO_PUBLIC_SUPABASE_URL" "$EXPO_PUBLIC_SUPABASE_ANON_KEY" > derleme/okindo/.env
 
       - name: Paketleri kur
+        working-directory: derleme/okindo
         run: |
-          cd app
-          npm install
-          npx expo install @supabase/supabase-js @react-native-async-storage/async-storage react-native-url-polyfill
+          npm install --no-audit --no-fund
+          npx expo install --fix
+
+      - name: Kod kontrolü (yalnız uyarı)
+        working-directory: derleme/okindo
+        continue-on-error: true
+        run: npx tsc --noEmit
 
       - name: APK derle
+        working-directory: derleme/okindo
         run: |
-          cd app
-          npx expo prebuild --platform android
+          npx expo prebuild --platform android --clean --no-install
           cd android
           ./gradlew assembleRelease --no-daemon
+
+      - name: APK'yı Releases bölümüne koy
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp derleme/okindo/android/app/build/outputs/apk/release/app-release.apk okindo.apk
+          gh release create "apk-${{ github.run_number }}" okindo.apk \
+            --title "okindo APK #${{ github.run_number }}" \
+            --notes "Telefona kurmak için aşağıdaki okindo.apk dosyasına dokun." \
+            --latest
 
       - uses: actions/upload-artifact@v4
         with:
           name: okindo-apk
-          path: app/android/app/build/outputs/apk/release/app-release.apk
+          path: okindo.apk
