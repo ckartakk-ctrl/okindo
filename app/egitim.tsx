@@ -137,7 +137,7 @@ export default function Egitim() {
               Baştan oku
             </Dugme>
           </View>
-          <View style={{ flex: 2 }}>
+          <View style={{ flex: 1 }}>
             <Dugme simge="checkmark-done" eksik={cevapsiz > 0 ? `${cevapsiz} soru cevapsız kaldı.` : null} onPress={bitir}>
               Testi bitir
             </Dugme>

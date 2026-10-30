@@ -28,6 +28,12 @@ export const supabase = createClient(ayarHatasi ? 'https://ayar-eksik.supabase.c
 /** Veritabanı fonksiyonunu çağırır; hata varsa kullanıcıya gösterilecek Türkçe mesajla fırlatır. */
 export async function rpc<T = unknown>(ad: string, parametreler: Record<string, unknown> = {}): Promise<T> {
   const { data, error } = await supabase.rpc(ad, parametreler);
-  if (error) throw new Error(error.message || 'Bir şeyler ters gitti. Lütfen tekrar dene.');
+  if (error) {
+    // Veritabanının kendi Türkçe kural mesajları olduğu gibi gösterilir; teknik hatalar sade bir cümleye çevrilir
+    const teknik = /schema cache|function|permission denied|violates|syntax|JWT|relation|column|PGRST|fetch|network/i.test(error.message ?? '');
+    throw new Error(
+      !error.message || teknik ? 'Bu işlem şu an tamamlanamadı. Bağlantını kontrol edip tekrar dene; sorun sürerse okindo’ya yaz.' : error.message,
+    );
+  }
   return data as T;
 }
