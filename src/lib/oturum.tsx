@@ -41,10 +41,15 @@ export function OturumSaglayici({ children }: { children: ReactNode }) {
       } catch {
         // tarayıcı deposu kullanılamıyorsa varsayılan mod kalır
       }
-      const { data } = await supabase.auth.getSession();
-      setOturum(data.session);
-      await profilYukle(data.session);
-      setHazir(true);
+      try {
+        const { data } = await supabase.auth.getSession();
+        setOturum(data.session);
+        await profilYukle(data.session);
+      } catch {
+        setOturum(null);
+      } finally {
+        setHazir(true);
+      }
     })();
     const { data: dinleyici } = supabase.auth.onAuthStateChange((_olay, s) => {
       setOturum(s);

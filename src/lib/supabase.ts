@@ -2,14 +2,21 @@ import 'react-native-url-polyfill/auto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 
-const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
-const anahtar = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+const url = (process.env.EXPO_PUBLIC_SUPABASE_URL ?? '').trim();
+const anahtar = (process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '').trim();
 
-if (!url || !anahtar) {
-  throw new Error('.env dosyasında EXPO_PUBLIC_SUPABASE_URL ve EXPO_PUBLIC_SUPABASE_ANON_KEY olmalı. README’deki 2. adıma bak.');
-}
+/** Ayarlar eksik ya da hatalıysa uygulama kapanmaz; bu mesaj ekranda gösterilir. */
+export const ayarHatasi: string | null = !url
+  ? 'SUPABASE_URL boş. GitHub > Settings > Secrets and variables > Actions içinde SUPABASE_URL ekli olmalı.'
+  : !/^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/i.test(url)
+    ? `SUPABASE_URL biçimi hatalı. "https://proje-kodun.supabase.co" gibi olmalı. Şu an "${url.slice(0, 12)}…" ile başlıyor ve ${url.length} karakter.`
+    : !anahtar
+      ? 'SUPABASE_KEY boş. GitHub secrets içinde Supabase anon public anahtarı ekli olmalı.'
+      : anahtar.split('.').length !== 3 && !anahtar.startsWith('sb_publishable_')
+        ? `SUPABASE_KEY biçimi hatalı (${anahtar.length} karakter). Supabase > Project Settings > API sayfasındaki "anon public" anahtarı olmalı.`
+        : null;
 
-export const supabase = createClient(url, anahtar, {
+export const supabase = createClient(ayarHatasi ? 'https://ayar-eksik.supabase.co' : url, ayarHatasi ? 'ayar-eksik' : anahtar, {
   auth: {
     storage: AsyncStorage,
     autoRefreshToken: true,
