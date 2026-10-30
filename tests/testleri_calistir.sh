@@ -7,7 +7,7 @@ P="psql -v ON_ERROR_STOP=1 -q"
 $P -c "drop database if exists okindo_test" >/dev/null
 $P -c "create database okindo_test" >/dev/null
 for f in tests/yerel_supabase_taklidi.sql supabase/migrations/0001_sema.sql \
-         supabase/migrations/0002_is_kurallari.sql supabase/migrations/0003_ornek_veri.sql; do
+         supabase/migrations/0002_is_kurallari.sql supabase/migrations/0003_ornek_veri.sql supabase/migrations/0006_guvenlik_sikilastirma.sql; do
   $P -d okindo_test -f "$f" >/dev/null
 done
 psql -v ON_ERROR_STOP=1 -q -t -A -d okindo_test -f tests/senaryo_testleri.sql | grep -E "^(TAMAM|---|TÜM|BAŞARISIZ)|ERROR" || true

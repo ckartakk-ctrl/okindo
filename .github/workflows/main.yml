@@ -14,9 +14,12 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
+    # Supabase okindo projesi (Frankfurt). Bu anahtar herkese açık "anon" anahtarıdır;
+    # uygulamanın içine zaten gömülür, veriler veritabanındaki erişim kurallarıyla korunur.
+    # Gizli "service_role" anahtarı ASLA buraya yazılmaz.
     env:
-      EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_KEY }}
+      EXPO_PUBLIC_SUPABASE_URL: https://taqrdphgahadaiageaon.supabase.co
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRhcXJkcGhnYWhhZGFpYWdlYW9uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMzNTUzNTgsImV4cCI6MjEwODkzMTM1OH0.pCeOZ4DokVK5LQ4GLrZLMHLKvGSTJiMKvlXzedINKtw
     steps:
       - uses: actions/checkout@v4
 
@@ -32,7 +35,7 @@ jobs:
       - name: Supabase anahtarlarını yaz
         run: |
           if [ -z "$EXPO_PUBLIC_SUPABASE_URL" ] || [ -z "$EXPO_PUBLIC_SUPABASE_ANON_KEY" ]; then
-            echo "::error::SUPABASE_URL ve SUPABASE_KEY eklenmemiş (Settings > Secrets and variables > Actions)"
+            echo "::error::Supabase adresi ya da anahtarı eksik"
             exit 1
           fi
           printf 'EXPO_PUBLIC_SUPABASE_URL=%s\nEXPO_PUBLIC_SUPABASE_ANON_KEY=%s\n' \
