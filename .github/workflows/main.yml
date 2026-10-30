@@ -113,8 +113,12 @@ jobs:
           printf 'EXPO_PUBLIC_SUPABASE_URL=%s\nEXPO_PUBLIC_SUPABASE_ANON_KEY=%s\n' "$EXPO_PUBLIC_SUPABASE_URL" "$EXPO_PUBLIC_SUPABASE_ANON_KEY" > .env
           npm install --no-audit --no-fund
           npx expo install react-native-web react-dom @expo/metro-runtime
-          node -e "const m=require('@expo-google-fonts/bricolage-grotesque');console.log('::notice title=Yazı tipi dosyaları::'+Object.keys(m).map(k=>k+':'+typeof m[k]).join(' '))"
-          npx expo export --platform web --output-dir web-dist 2>&1 | tail -20
+          echo "::notice title=Yazı tipi paketi::$(ls node_modules/@expo-google-fonts/bricolage-grotesque | tr '\n' ' ' | cut -c1-900) | index: $(grep -o 'BricolageGrotesque_[A-Za-z0-9_]*600[A-Za-z]*' node_modules/@expo-google-fonts/bricolage-grotesque/index.js | sort -u | tr '\n' ' ')" || true
+          set -o pipefail
+          npx expo export --platform web --output-dir web-dist 2>&1 | tee web.log | tail -20 || {
+            echo "::error title=Web derleme::$(grep -i -E 'error|unable|cannot' web.log | tail -15 | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g')"
+            exit 1
+          }
       - name: Ekran görüntülerini al
         run: |
           npm install --no-save --no-audit --no-fund playwright@1.49.1
