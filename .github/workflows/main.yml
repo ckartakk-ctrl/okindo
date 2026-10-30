@@ -1,6 +1,7 @@
 name: Android APK
 
-# okindo-pilot.zip dosyasını açar, APK derler ve Releases bölümüne koyar.
+# Koda her değişiklik yüklendiğinde (ya da Actions sekmesinden "Run workflow" ile) APK derlenir.
+# Bitince APK, deponun "Releases" bölümüne telefondan indirilebilir şekilde konur.
 on:
   push:
     branches: [main]
@@ -11,7 +12,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     env:
       EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -28,45 +29,55 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Paketi aç ve anahtarları yaz
+      - name: Supabase anahtarlarını yaz
         run: |
           if [ -z "$EXPO_PUBLIC_SUPABASE_URL" ] || [ -z "$EXPO_PUBLIC_SUPABASE_ANON_KEY" ]; then
             echo "::error::SUPABASE_URL ve SUPABASE_KEY eklenmemiş (Settings > Secrets and variables > Actions)"
             exit 1
           fi
-          unzip -q okindo-pilot.zip -d derleme
           printf 'EXPO_PUBLIC_SUPABASE_URL=%s\nEXPO_PUBLIC_SUPABASE_ANON_KEY=%s\n' \
-            "$EXPO_PUBLIC_SUPABASE_URL" "$EXPO_PUBLIC_SUPABASE_ANON_KEY" > derleme/okindo/.env
+            "$EXPO_PUBLIC_SUPABASE_URL" "$EXPO_PUBLIC_SUPABASE_ANON_KEY" > .env
 
       - name: Paketleri kur
-        working-directory: derleme/okindo
         run: |
           npm install --no-audit --no-fund
           npx expo install --fix
 
       - name: Kod kontrolü (yalnız uyarı)
-        working-directory: derleme/okindo
         continue-on-error: true
         run: npx tsc --noEmit
 
-      - name: APK derle
-        working-directory: derleme/okindo
+      - name: Android projesini oluştur
         run: |
-          npx expo prebuild --platform android --clean --no-install
+          set -o pipefail
+          npx expo prebuild --platform android --clean --no-install 2>&1 | tee prebuild.log
+
+      - name: APK derle
+        run: |
+          set -o pipefail
           cd android
-          ./gradlew assembleRelease --no-daemon
+          ./gradlew assembleRelease --no-daemon 2>&1 | tee ../gradle.log
+
+      # Hata olursa son satırları, Actions sayfasındaki "Annotations" bölümüne yazar
+      - name: Hata özetini göster
+        if: failure()
+        run: |
+          for f in prebuild.log gradle.log; do
+            [ -f "$f" ] || continue
+            ozet=$(grep -n -i -E "error|what went wrong|failed|exception|cannot|could not" "$f" | tail -40)
+            [ -n "$ozet" ] || ozet=$(tail -40 "$f")
+            ozet=$(printf '%s' "$ozet" | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g')
+            echo "::error title=$f::$ozet"
+            son=$(tail -25 "$f" | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g')
+            echo "::error title=$f (son satırlar)::$son"
+          done
 
       - name: APK'yı Releases bölümüne koy
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cp derleme/okindo/android/app/build/outputs/apk/release/app-release.apk okindo.apk
+          cp android/app/build/outputs/apk/release/app-release.apk okindo.apk
           gh release create "apk-${{ github.run_number }}" okindo.apk \
             --title "okindo APK #${{ github.run_number }}" \
             --notes "Telefona kurmak için aşağıdaki okindo.apk dosyasına dokun." \
             --latest
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: okindo-apk
-          path: okindo.apk

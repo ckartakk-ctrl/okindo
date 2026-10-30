@@ -1,0 +1,28 @@
+{
+  "cli": {
+    "version": ">= 12.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://PROJE-KODUN.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "buraya-anon-public-anahtar"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://PROJE-KODUN.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "buraya-anon-public-anahtar"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
