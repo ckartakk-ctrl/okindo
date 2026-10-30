@@ -1,28 +1,78 @@
 import * as ImagePicker from 'expo-image-picker';
+import { Alert } from 'react-native';
 import { supabase } from './supabase';
 
+const ALFABE = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+
+/** Base64 metni ham bayta çevirir (Android'de dosyayı fetch ile okumak güvenilir değil) */
+function base64Coz(b64: string): ArrayBuffer {
+  const temiz = b64.replace(/[^A-Za-z0-9+/]/g, '');
+  const uzunluk = Math.floor((temiz.length * 3) / 4);
+  const bayt = new Uint8Array(uzunluk);
+  let j = 0;
+  for (let i = 0; i < temiz.length; i += 4) {
+    const a = ALFABE.indexOf(temiz[i]);
+    const b = ALFABE.indexOf(temiz[i + 1]);
+    const c = i + 2 < temiz.length ? ALFABE.indexOf(temiz[i + 2]) : 0;
+    const d = i + 3 < temiz.length ? ALFABE.indexOf(temiz[i + 3]) : 0;
+    const sayi = (a << 18) | (b << 12) | (c << 6) | d;
+    if (j < uzunluk) bayt[j++] = (sayi >> 16) & 255;
+    if (j < uzunluk && i + 2 < temiz.length) bayt[j++] = (sayi >> 8) & 255;
+    if (j < uzunluk && i + 3 < temiz.length) bayt[j++] = sayi & 255;
+  }
+  return bayt.buffer.slice(0, j);
+}
+
+/** Kamera mı galeri mi? Kullanıcıya sorar. */
+function kaynakSor(): Promise<'kamera' | 'galeri' | null> {
+  return new Promise((coz) =>
+    Alert.alert('Fotoğraf ekle', 'Fotoğrafı nereden ekleyeceksin?', [
+      { text: 'Vazgeç', style: 'cancel', onPress: () => coz(null) },
+      { text: 'Galeriden seç', onPress: () => coz('galeri') },
+      { text: 'Fotoğraf çek', onPress: () => coz('kamera') },
+    ], { cancelable: true, onDismiss: () => coz(null) }),
+  );
+}
+
 /**
- * Kamerayla (ya da galeriden) fotoğraf çeker ve iş klasörüne yükler.
+ * Kamerayla ya da galeriden fotoğraf alır ve iş klasörüne yükler.
  * Dönen yol "<iş-id>/<dosya>.jpg" biçimindedir; veritabanına bu yol kaydedilir.
  */
-export async function fotoCekVeYukle(isId: string, onEk: string, kaynak: 'kamera' | 'galeri' = 'kamera'): Promise<string | null> {
+export async function fotoCekVeYukle(isId: string, onEk: string, kaynak?: 'kamera' | 'galeri'): Promise<string | null> {
+  const secim = kaynak ?? (await kaynakSor());
+  if (!secim) return null;
+
   const izin =
-    kaynak === 'kamera'
+    secim === 'kamera'
       ? await ImagePicker.requestCameraPermissionsAsync()
       : await ImagePicker.requestMediaLibraryPermissionsAsync();
-  if (!izin.granted) throw new Error('Fotoğraf için izin vermelisin. Telefon ayarlarından okindo’ya kamera izni ver.');
+  if (!izin.granted) {
+    throw new Error(
+      secim === 'kamera'
+        ? 'Kamera izni kapalı. Telefon ayarlarında okindo için kamera iznini aç ya da "Galeriden seç"i kullan.'
+        : 'Galeri izni kapalı. Telefon ayarlarında okindo için fotoğraf iznini aç.',
+    );
+  }
 
-  const sonuc =
-    kaynak === 'kamera'
-      ? await ImagePicker.launchCameraAsync({ quality: 0.5 })
-      : await ImagePicker.launchImageLibraryAsync({ quality: 0.5, mediaTypes: ['images'] });
+  const ayar: ImagePicker.ImagePickerOptions = { quality: 0.4, base64: true, mediaTypes: ['images'], exif: false };
+  let sonuc: ImagePicker.ImagePickerResult;
+  try {
+    sonuc = secim === 'kamera' ? await ImagePicker.launchCameraAsync(ayar) : await ImagePicker.launchImageLibraryAsync(ayar);
+  } catch {
+    throw new Error(
+      secim === 'kamera' ? 'Kamera açılamadı. "Galeriden seç" ile telefonun kamerasıyla çektiğin fotoğrafı ekleyebilirsin.' : 'Galeri açılamadı.',
+    );
+  }
   if (sonuc.canceled || !sonuc.assets?.length) return null;
 
   const dosya = sonuc.assets[0];
-  const veri = await (await fetch(dosya.uri)).arrayBuffer();
+  if (!dosya.base64) throw new Error('Fotoğraf okunamadı. Bir kez daha dene.');
+
   const yol = `${isId}/${onEk}-${Date.now()}.jpg`;
-  const { error } = await supabase.storage.from('is-fotograflari').upload(yol, veri, { contentType: 'image/jpeg' });
-  if (error) throw new Error('Fotoğraf yüklenemedi. İnternet bağlantını kontrol edip tekrar dene.');
+  const { error } = await supabase.storage
+    .from('is-fotograflari')
+    .upload(yol, base64Coz(dosya.base64), { contentType: 'image/jpeg', upsert: false });
+  if (error) throw new Error(`Fotoğraf yüklenemedi (${error.message}). İnternet bağlantını kontrol edip tekrar dene.`);
   return yol;
 }
 
