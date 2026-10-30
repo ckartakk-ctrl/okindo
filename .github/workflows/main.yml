@@ -54,6 +54,10 @@ jobs:
         run: |
           set -o pipefail
           npx expo prebuild --platform android --clean --no-install 2>&1 | tee prebuild.log
+          # Derleme belleği ve hedef işlemciler (x86 eski, gerek yok)
+          sed -i '/^org.gradle.jvmargs=/d;/^reactNativeArchitectures=/d' android/gradle.properties
+          echo 'org.gradle.jvmargs=-Xmx5g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8' >> android/gradle.properties
+          echo 'reactNativeArchitectures=armeabi-v7a,arm64-v8a,x86_64' >> android/gradle.properties
 
       - name: APK derle
         run: |
