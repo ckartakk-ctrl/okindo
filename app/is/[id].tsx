@@ -6,23 +6,26 @@ import { FotoGalerisi } from '@/components/FotoGalerisi';
 import { HvKartGorunumu } from '@/components/HvKartGorunumu';
 import {
   AltBaslik,
+  BilgiSatiri,
   Dugme,
   Ekran,
   Girdi,
   Kart,
   Metin,
+  OkDamgasi,
   onayla,
   renk,
   Rozet,
   Satir,
   Secenekler,
+  yazi,
   Yukleniyor,
 } from '@/components/ui';
 import { durumMetni, hvDurumMetni, saatMetni, tl, zaman } from '@/lib/bicim';
 import { fotoCekVeYukle } from '@/lib/foto';
 import { useOturum } from '@/lib/oturum';
 import { rpc, supabase } from '@/lib/supabase';
-import type { EkIs, Foto, HvKarti, Is, Masraf, Mesaj } from '@/lib/tipler';
+import type { EkIs, Foto, HvKarti, Is, IsDurumu, Masraf, Mesaj } from '@/lib/tipler';
 
 type Veri = {
   is: Is;
@@ -109,16 +112,21 @@ export default function IsEkrani() {
   return (
     <Ekran yenile={yukle}>
       <Stack.Screen options={{ title: is.hizmetler?.ad ?? 'İş' }} />
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Rozet tur={['sorun', 'gelmedi', 'iptal'].includes(is.durum) ? 'uyari' : 'ana'}>
-          {(hvyim && hvDurumMetni[is.durum]) || durumMetni[is.durum]}
-        </Rozet>
-        <Metin soluk kucuk>{zaman(is.planlanan_baslangic)}</Metin>
-      </View>
-
-      <Kart>
-        <Metin kalin>{is.hizmetler?.ad}</Metin>
-        {is.saat ? <Metin soluk>{saatMetni(is.saat)}</Metin> : null}
+      <Kart stilEk={{ padding: 20, gap: 10 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+          <Rozet tur={['sorun', 'gelmedi', 'iptal'].includes(is.durum) ? 'uyari' : is.durum === 'onaylandi' ? 'damga' : 'ana'}>
+            {(hvyim && hvDurumMetni[is.durum]) || durumMetni[is.durum]}
+          </Rozet>
+          {is.durum === 'onaylandi' ? <OkDamgasi boyut={40} /> : null}
+        </View>
+        <Text style={{ fontFamily: yazi.baslik, fontSize: 24, lineHeight: 29, color: renk.metin, letterSpacing: -0.5 }}>
+          {is.hizmetler?.ad}
+        </Text>
+        <BilgiSatiri simge="time-outline">
+          {zaman(is.planlanan_baslangic)}
+          {is.saat ? ` · ${saatMetni(is.saat)}` : ''}
+        </BilgiSatiri>
+        <DurumAdimlari durum={is.durum} />
         {Object.entries(is.cevaplar ?? {}).map(([k, v]) => {
           const soru = is.hizmetler?.sorular?.find((s) => s.id === k);
           return <Metin key={k} soluk kucuk>{`${soru?.soru ?? k} ${v}`}</Metin>;
@@ -163,13 +171,14 @@ export default function IsEkrani() {
       {['kabul', 'yolda', 'adreste', 'basladi', 'bitti'].includes(is.durum) && (musteriyim || hvyim) ? (
         <Dugme
           tur="tehlike"
+          simge="medkit-outline"
           onPress={async () => {
             if (!(await onayla('Acil durum', '112 aranacak ve okindo’ya hemen haber verilecek.', '112’yi ara'))) return;
             rpc('acil_bildir', { p_is: is.id }).catch(() => undefined);
             await Linking.openURL('tel:112');
           }}
         >
-          Acil durum · 112
+          Acil durum: 112’yi ara
         </Dugme>
       ) : null}
 
@@ -203,7 +212,7 @@ function MusteriBolumu({ veri, eylem }: { veri: Veri; eylem: (ad: string, p: Rec
       {veri.kod && ['kabul', 'yolda', 'adreste'].includes(is.durum) ? (
         <Kart vurgu="ana">
           <Metin>Kapıyı açınca gelen kişiye bu kodu söyle:</Metin>
-          <Text style={{ fontSize: 40, fontWeight: '800', letterSpacing: 8, color: renk.ana, textAlign: 'center' }}>
+          <Text style={{ fontFamily: yazi.baslik, fontSize: 48, letterSpacing: 12, color: renk.anaKoyu, textAlign: 'center', marginVertical: 6 }}>
             {veri.kod}
           </Text>
           <Metin soluk kucuk>Kod girildiğinde iş başlar ve sigorta kapsamı açılır.</Metin>
@@ -756,5 +765,57 @@ function Mesajlar({ veri, ben, eylem }: { veri: Veri; ben: string; eylem: (ad: s
       </Dugme>
       <Metin soluk kucuk>Güvenliğin için telefon, IBAN ve e-posta mesajlarda gizlenir. okindo senden asla uygulama dışında ödeme istemez.</Metin>
     </>
+  );
+}
+
+// ------------------------------------------------------------
+// İŞİN GİDİŞATI: kabulden onaya kadar sıralı adımlar
+// ------------------------------------------------------------
+const adimlar: { durum: IsDurumu; ad: string }[] = [
+  { durum: 'kabul', ad: 'Kabul' },
+  { durum: 'yolda', ad: 'Yolda' },
+  { durum: 'adreste', ad: 'Kapıda' },
+  { durum: 'basladi', ad: 'Sürüyor' },
+  { durum: 'bitti', ad: 'Bitti' },
+  { durum: 'onaylandi', ad: 'Onay' },
+];
+
+function DurumAdimlari({ durum }: { durum: IsDurumu }) {
+  const sira = adimlar.findIndex((a) => a.durum === durum);
+  if (sira < 0) return null;
+  return (
+    <View style={{ flexDirection: 'row', marginTop: 8 }} accessibilityLabel={`Adım ${sira + 1} / ${adimlar.length}: ${adimlar[sira].ad}`}>
+      {adimlar.map((a, i) => {
+        const gecti = i < sira || durum === 'onaylandi';
+        const simdi = i === sira && durum !== 'onaylandi';
+        return (
+          <View key={a.durum} style={{ flex: 1, alignItems: 'center', gap: 6 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'stretch' }}>
+              <View style={{ flex: 1, height: 3, backgroundColor: i === 0 ? 'transparent' : i <= sira ? renk.ana : renk.cizgi }} />
+              <View
+                style={{
+                  width: simdi ? 20 : 14,
+                  height: simdi ? 20 : 14,
+                  borderRadius: 10,
+                  backgroundColor: gecti ? renk.ana : simdi ? renk.damga : renk.kart,
+                  borderWidth: gecti || simdi ? 0 : 2,
+                  borderColor: renk.cizgi,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                {simdi ? <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: renk.metin }} /> : null}
+              </View>
+              <View
+                style={{ flex: 1, height: 3, backgroundColor: i === adimlar.length - 1 ? 'transparent' : i < sira ? renk.ana : renk.cizgi }}
+              />
+            </View>
+            <Text style={{ fontSize: 11, fontWeight: simdi ? '800' : '600', color: simdi ? renk.metin : gecti ? renk.ana : renk.silik }}>
+              {a.ad}
+            </Text>
+          </View>
+        );
+      })}
+    </View>
   );
 }

@@ -1,9 +1,9 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Linking } from 'react-native';
-import { AltBaslik, Dugme, Ekran, Kart, Metin, onayla, Satir, Secenekler } from '@/components/ui';
+import { Linking, Pressable, Text, View } from 'react-native';
+import { Ekran, Grup, GrupSatiri, Kart, OkDamgasi, onayla, renk, Rozet, Simge, Tutar, yazi } from '@/components/ui';
 import { tl } from '@/lib/bicim';
-import { useOturum } from '@/lib/oturum';
+import { useOturum, type Mod } from '@/lib/oturum';
 import { rpc, supabase } from '@/lib/supabase';
 import type { Kupon } from '@/lib/tipler';
 
@@ -34,90 +34,144 @@ export default function Hesap() {
 
   if (!profil) return null;
 
+  const basHarf = (profil.ad ?? '?').slice(0, 1).toLocaleUpperCase('tr-TR');
+  const hvAktif = profil.hv_durum === 'aktif';
+
   return (
     <Ekran yenile={yukle}>
-      <Kart>
-        <Metin kalin>
-          {profil.ad} {profil.soyad ?? ''}
-        </Metin>
-        <Metin soluk>{profil.telefon ? `+${profil.telefon.replace(/^\+/, '')}` : ''}</Metin>
-      </Kart>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 4 }}>
+        <View>
+          <View
+            style={{
+              width: 64,
+              height: 64,
+              borderRadius: 32,
+              backgroundColor: renk.anaKoyu,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Text style={{ fontFamily: yazi.baslik, fontSize: 28, color: '#FFFFFF' }}>{basHarf}</Text>
+          </View>
+          {hvAktif ? (
+            <View style={{ position: 'absolute', right: -8, bottom: -6 }}>
+              <OkDamgasi boyut={28} />
+            </View>
+          ) : null}
+        </View>
+        <View style={{ flex: 1, gap: 4 }}>
+          <Text style={{ fontFamily: yazi.kalin, fontSize: 20, color: renk.metin }}>
+            {profil.ad} {profil.soyad ?? ''}
+          </Text>
+          <Text style={{ fontSize: 14, color: renk.soluk }}>{profil.telefon ? `+${profil.telefon.replace(/^\+/, '')}` : ''}</Text>
+          {hvAktif ? <Rozet tur="damga">Onaylı hizmet veren</Rozet> : null}
+        </View>
+      </View>
 
       {profil.hv_durum !== 'yok' ? (
-        <Secenekler
-          etiket="Uygulamayı nasıl kullanıyorsun?"
-          secenekler={[
-            { deger: 'musteri', ad: 'Hizmet alıyorum' },
-            { deger: 'hv', ad: 'Hizmet veriyorum' },
-          ]}
-          secili={mod}
-          sec={(m) => {
-            modDegistir(m as 'musteri' | 'hv');
-            router.replace('/');
-          }}
-        />
+        <ModSecici mod={mod} sec={(m) => {
+          modDegistir(m);
+          router.replace('/');
+        }} />
       ) : (
-        <Kart onPress={() => router.push('/hv-basvuru')}>
-          <Metin kalin>okindo’da iş al</Metin>
-          <Metin soluk kucuk>Elinden gelen işi kayıtlı ve sigortalı ek gelire çevir.</Metin>
+        <Kart vurgu="koyu" onPress={() => router.push('/hv-basvuru')}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <View style={{ flex: 1, gap: 4 }}>
+              <Text style={{ fontFamily: yazi.kalin, fontSize: 17, color: '#FFFFFF' }}>okindo’da iş al</Text>
+              <Text style={{ fontSize: 13, lineHeight: 18, color: '#BFE0D8' }}>
+                Elinden gelen işi, mahallende kayıtlı ve sigortalı ek gelire çevir.
+              </Text>
+            </View>
+            <Simge ad="arrow-forward-circle" boyut={32} renkli={renk.damga} />
+          </View>
         </Kart>
       )}
 
-      {profil.hv_durum === 'aktif' && !profil.egitim_tamam_at ? (
-        <Dugme onPress={() => router.push('/egitim')}>Eğitimi tamamla</Dugme>
+      {hvAktif && !profil.egitim_tamam_at ? (
+        <Grup>
+          <GrupSatiri simge="school-outline" baslik="Eğitimi tamamla" alt="İş almaya başlamadan önceki son adım" onPress={() => router.push('/egitim')} />
+        </Grup>
       ) : null}
-
-      <Kart onPress={() => router.push('/bildirimler')}>
-        <Satir sol="Bildirimler" sag={okunmamis ? `${okunmamis} yeni` : ''} />
-      </Kart>
 
       {mod === 'musteri' ? (
-        <>
-          <AltBaslik>Kuponların</AltBaslik>
-          {kuponlar.length ? (
-            kuponlar.map((k) => (
-              <Kart key={k.id}>
-                <Satir sol={k.sebep} sag={tl(k.tutar)} kalin />
-                <Metin soluk kucuk>Son gün: {new Date(k.son_gecerlilik).toLocaleDateString('tr-TR')} · sıradaki işinde kendiliğinden düşülür</Metin>
-              </Kart>
-            ))
-          ) : (
-            <Metin soluk>Şu an kuponun yok.</Metin>
-          )}
-        </>
+        kuponlar.length ? (
+          <Grup baslik="Kuponların">
+            {kuponlar.map((k) => (
+              <GrupSatiri
+                key={k.id}
+                simge="pricetag-outline"
+                baslik={k.sebep}
+                alt={`Son gün ${new Date(k.son_gecerlilik).toLocaleDateString('tr-TR')}. Sıradaki işinde kendiliğinden düşülür.`}
+                sag={<Tutar boyut={18} renkli={renk.anaKoyu}>{tl(k.tutar)}</Tutar>}
+              />
+            ))}
+          </Grup>
+        ) : null
       ) : null}
 
-      {profil.yonetici ? (
-        <Dugme tur="ikincil" onPress={() => router.push('/yonetici')}>
-          Yönetici paneli
-        </Dugme>
-      ) : null}
+      <Grup baslik="Genel">
+        <GrupSatiri
+          simge="notifications-outline"
+          baslik="Bildirimler"
+          sag={okunmamis ? <Rozet>{`${okunmamis} yeni`}</Rozet> : undefined}
+          onPress={() => router.push('/bildirimler')}
+        />
+        {destek ? <GrupSatiri simge="call-outline" baslik="okindo’ya sor" alt="Destek hattını ara" onPress={() => Linking.openURL(`tel:${destek}`)} /> : null}
+        {profil.yonetici ? <GrupSatiri simge="shield-checkmark-outline" baslik="Yönetici paneli" onPress={() => router.push('/yonetici')} /> : null}
+      </Grup>
 
-      {destek ? (
-        <Dugme tur="ikincil" onPress={() => Linking.openURL(`tel:${destek}`)}>
-          okindo’ya sor (destek)
-        </Dugme>
-      ) : null}
-
-      <Dugme tur="ikincil" onPress={cikis}>
-        Çıkış yap
-      </Dugme>
-      <Dugme
-        tur="tehlike"
-        onPress={async () => {
-          const tamam = await onayla(
-            'Hesabını sil',
-            'Hesabın ve kişisel bilgilerin silinir. Yasal olarak saklamamız gereken fatura kayıtları süresi dolana kadar kalır.',
-            'Sil',
-          );
-          if (!tamam) return;
-          await rpc('hesap_silme_istegi');
-          await supabase.functions.invoke('hesap-sil');
-          await cikis();
-        }}
-      >
-        Hesabımı sil
-      </Dugme>
+      <Grup>
+        <GrupSatiri simge="log-out-outline" baslik="Çıkış yap" ok={false} onPress={cikis} />
+        <GrupSatiri
+          simge="trash-outline"
+          baslik="Hesabımı sil"
+          tehlike
+          ok={false}
+          onPress={async () => {
+            const tamam = await onayla(
+              'Hesabını sil',
+              'Hesabın ve kişisel bilgilerin silinir. Yasal olarak saklamamız gereken fatura kayıtları süresi dolana kadar kalır.',
+              'Hesabımı sil',
+            );
+            if (!tamam) return;
+            await rpc('hesap_silme_istegi');
+            await supabase.functions.invoke('hesap-sil');
+            await cikis();
+          }}
+        />
+      </Grup>
     </Ekran>
+  );
+}
+
+/** İki konumlu anahtar: hizmet alıyorum / hizmet veriyorum */
+function ModSecici({ mod, sec }: { mod: Mod; sec: (m: Mod) => void }) {
+  const secenekler: { deger: Mod; ad: string }[] = [
+    { deger: 'musteri', ad: 'Hizmet alıyorum' },
+    { deger: 'hv', ad: 'Hizmet veriyorum' },
+  ];
+  return (
+    <View style={{ flexDirection: 'row', backgroundColor: '#DDE6E3', borderRadius: 16, padding: 4 }}>
+      {secenekler.map((s) => {
+        const aktif = s.deger === mod;
+        return (
+          <Pressable
+            key={s.deger}
+            accessibilityRole="button"
+            accessibilityState={{ selected: aktif }}
+            onPress={() => !aktif && sec(s.deger)}
+            style={{
+              flex: 1,
+              paddingVertical: 12,
+              borderRadius: 12,
+              alignItems: 'center',
+              backgroundColor: aktif ? renk.kart : 'transparent',
+            }}
+          >
+            <Text style={{ fontFamily: yazi.kalin, fontSize: 15, color: aktif ? renk.anaKoyu : renk.soluk }}>{s.ad}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
   );
 }

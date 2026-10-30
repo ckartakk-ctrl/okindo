@@ -48,7 +48,11 @@ jobs:
 
       - name: Kod kontrolü (yalnız uyarı)
         continue-on-error: true
-        run: npx tsc --noEmit
+        run: |
+          if ! npx tsc --noEmit > tsc.log 2>&1; then
+            echo "::warning title=Tip kontrolü::$(head -40 tsc.log | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g')"
+            exit 1
+          fi
 
       - name: Android projesini oluştur
         run: |

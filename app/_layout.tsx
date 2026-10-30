@@ -1,12 +1,14 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Stack, useRouter, useSegments } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
+import { useFonts } from 'expo-font';
+import { setStatusBarStyle } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { Dugme, renk, stil, Yukleniyor } from '@/components/ui';
+import { Dugme, renk, stil, yazi, Yukleniyor } from '@/components/ui';
 import { OturumSaglayici, useOturum } from '@/lib/oturum';
 import { ayarHatasi } from '@/lib/supabase';
+import { yaziTipleri } from '@/lib/yazitipi';
 
 /** Ekranda hata gösterir; uygulama sessizce kapanmaz. */
 function HataEkrani({ baslik, mesaj, tekrar }: { baslik: string; mesaj: string; tekrar?: () => void }) {
@@ -54,6 +56,7 @@ function Yonlendirici() {
         headerStyle: { backgroundColor: renk.zemin },
         headerShadowVisible: false,
         headerTintColor: renk.metin,
+        headerTitleStyle: { fontFamily: yazi.kalin, fontSize: 18 },
         headerBackTitle: 'Geri',
         contentStyle: { backgroundColor: renk.zemin },
       }}
@@ -75,7 +78,10 @@ function Yonlendirici() {
 
 export default function KokDuzen() {
   const [sonHata, setSonHata] = useState<string | null>(null);
+  // Yazı tipi yüklenemese bile uygulama sistem yazısıyla açılır
+  const [yaziHazir, yaziHatasi] = useFonts(yaziTipleri);
   useEffect(() => {
+    setStatusBarStyle('dark');
     AsyncStorage.getItem('okindo-son-hata')
       .then((h) => setSonHata(h))
       .catch(() => undefined);
@@ -103,10 +109,11 @@ export default function KokDuzen() {
     );
   }
 
+  if (!yaziHazir && !yaziHatasi) return <Yukleniyor />;
+
   return (
     <SafeAreaProvider>
       <OturumSaglayici>
-        <StatusBar style="dark" />
         <Yonlendirici />
       </OturumSaglayici>
     </SafeAreaProvider>

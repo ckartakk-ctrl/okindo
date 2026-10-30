@@ -1,11 +1,34 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { View } from 'react-native';
-import { AltBaslik, Bos, Dugme, Ekran, Kart, Metin, Rozet } from '@/components/ui';
+import { Pressable, Text, View } from 'react-native';
+import { Bos, Dugme, Ekran, Grup, renk, Rozet, Simge, stil, type SimgeAdi } from '@/components/ui';
 import { bitmisDurumlar, durumMetni, hvDurumMetni, tl, zaman } from '@/lib/bicim';
 import { useOturum } from '@/lib/oturum';
 import { supabase } from '@/lib/supabase';
-import type { Is } from '@/lib/tipler';
+import type { Is, IsDurumu } from '@/lib/tipler';
+
+const durumSimgesi: Record<IsDurumu, SimgeAdi> = {
+  odeme_bekliyor: 'card-outline',
+  acik: 'search-outline',
+  kabul: 'person-outline',
+  yolda: 'walk-outline',
+  adreste: 'home-outline',
+  basladi: 'construct-outline',
+  bitti: 'hourglass-outline',
+  onaylandi: 'checkmark-circle',
+  sorun: 'alert-circle-outline',
+  iptal: 'close-circle-outline',
+  gelmedi: 'close-circle-outline',
+  evde_yok: 'close-circle-outline',
+  yapilamadi: 'close-circle-outline',
+};
+
+function rozetTuru(d: IsDurumu): 'ana' | 'uyari' | 'soluk' | 'damga' {
+  if (['sorun', 'gelmedi'].includes(d)) return 'uyari';
+  if (d === 'onaylandi') return 'damga';
+  if (bitmisDurumlar.includes(d)) return 'soluk';
+  return 'ana';
+}
 
 export default function Islerim() {
   const { oturum, mod } = useOturum();
@@ -36,36 +59,56 @@ export default function Islerim() {
     return (
       <Ekran yenile={yukle}>
         <Bos
+          simge="calendar-clear-outline"
           baslik="Henüz işin yok"
-          metin={mod === 'hv' ? 'Kabul ettiğin işler burada görünür.' : 'Açtığın talepler burada görünür.'}
-          eylem={mod === 'musteri' ? <Dugme onPress={() => router.push('/')}>Hizmetlere göz at</Dugme> : undefined}
+          metin={mod === 'hv' ? 'Kabul ettiğin işler burada görünür.' : 'Açtığın talepler ve geçmiş işlerin burada görünür.'}
+          eylem={
+            mod === 'musteri' ? (
+              <Dugme simge="add" onPress={() => router.push('/')}>
+                İlk işini aç
+              </Dugme>
+            ) : undefined
+          }
         />
       </Ekran>
     );
   }
 
-  const satir = (i: Is) => (
-    <Kart key={i.id} onPress={() => router.push({ pathname: '/is/[id]', params: { id: i.id } })}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Metin kalin>{i.hizmetler?.ad}</Metin>
-        <Rozet tur={['sorun', 'gelmedi'].includes(i.durum) ? 'uyari' : bitmisDurumlar.includes(i.durum) ? 'soluk' : 'ana'}>
-          {(mod === 'hv' && hvDurumMetni[i.durum]) || durumMetni[i.durum]}
-        </Rozet>
-      </View>
-      <Metin soluk kucuk>
-        {zaman(i.planlanan_baslangic)}
-        {mod === 'musteri' ? ` · ${tl(i.musteri_toplam_kd)}` : ` · ${tl(i.hv_tutari_kh + i.yol_kh)}`}
-        {i.seri_id ? ' · Düzenli' : ''}
-      </Metin>
-    </Kart>
-  );
+  const satir = (i: Is) => {
+    const bitti = bitmisDurumlar.includes(i.durum);
+    return (
+      <Pressable
+        key={i.id}
+        accessibilityRole="button"
+        onPress={() => router.push({ pathname: '/is/[id]', params: { id: i.id } })}
+        style={({ pressed }) => [stil.grupSatiri, { alignItems: 'flex-start' }, pressed && { backgroundColor: '#F3F7F5' }]}
+      >
+        <View style={[stil.simgeKutusu, bitti && { backgroundColor: '#EEF1F0' }]}>
+          <Simge ad={durumSimgesi[i.durum]} boyut={19} renkli={bitti ? renk.silik : renk.ana} />
+        </View>
+        <View style={{ flex: 1, gap: 6 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
+            <Text style={[stil.metin, { fontWeight: '700', flex: 1 }]} numberOfLines={1}>
+              {i.hizmetler?.ad}
+            </Text>
+            <Text style={[stil.metin, { fontWeight: '700', fontVariant: ['tabular-nums'] }]}>
+              {mod === 'musteri' ? tl(i.musteri_toplam_kd) : tl(i.hv_tutari_kh + i.yol_kh)}
+            </Text>
+          </View>
+          <Text style={[stil.metin, { fontSize: 13, color: renk.soluk }]}>
+            {zaman(i.planlanan_baslangic)}
+            {i.seri_id ? ' · Düzenli' : ''}
+          </Text>
+          <Rozet tur={rozetTuru(i.durum)}>{(mod === 'hv' && hvDurumMetni[i.durum]) || durumMetni[i.durum]}</Rozet>
+        </View>
+      </Pressable>
+    );
+  };
 
   return (
     <Ekran yenile={yukle}>
-      {devam.length ? <AltBaslik>Devam edenler</AltBaslik> : null}
-      {devam.map(satir)}
-      {gecmis.length ? <AltBaslik>Geçmiş</AltBaslik> : null}
-      {gecmis.map(satir)}
+      {devam.length ? <Grup baslik="Devam edenler">{devam.map(satir)}</Grup> : null}
+      {gecmis.length ? <Grup baslik="Geçmiş">{gecmis.map(satir)}</Grup> : null}
     </Ekran>
   );
 }

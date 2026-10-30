@@ -1,6 +1,6 @@
 {
   "name": "okindo",
-  "version": "0.1.0",
+  "version": "0.4.0",
   "private": true,
   "main": "index.js",
   "scripts": {
@@ -10,6 +10,8 @@
     "tip-kontrol": "tsc --noEmit"
   },
   "dependencies": {
+    "@expo-google-fonts/bricolage-grotesque": "*",
+    "@expo/vector-icons": "^14.1.0",
     "@react-native-async-storage/async-storage": "2.1.2",
     "@supabase/supabase-js": "^2.49.4",
     "expo": "~53.0.0",
