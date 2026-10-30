@@ -83,15 +83,8 @@ jobs:
             echo "::error title=$f (son satırlar)::$son"
           done
 
-      - name: APK'yı Releases bölümüne koy
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          cp android/app/build/outputs/apk/release/app-release.apk okindo.apk
-          gh release create "apk-${{ github.run_number }}" okindo.apk \
-            --title "okindo APK #${{ github.run_number }}" \
-            --notes "Telefona kurmak için aşağıdaki okindo.apk dosyasına dokun." \
-            --latest
+      - name: APK'yı hazırla
+        run: cp android/app/build/outputs/apk/release/app-release.apk okindo.apk
 
       - uses: actions/upload-artifact@v4
         with:
@@ -139,6 +132,7 @@ jobs:
             echo "::notice title=Açılış testi::Uygulama 30 saniye sonra hâlâ çalışıyor (pid $(cat pid.txt))"
           else
             echo "::error title=Açılış testi::Uygulama 30 saniye içinde kapandı"
+            echo "kapandi" > sonuc.txt
           fi
           if [ -f logcat.txt ]; then
             cokme=$(grep -n -A 45 -E "FATAL EXCEPTION|Fatal signal|SoLoaderDSONotFoundError|UnsatisfiedLinkError" logcat.txt | head -80)
@@ -150,3 +144,23 @@ jobs:
             yazi=$(grep -o 'text="[^"]*"' ekran.xml | grep -v 'text=""' | head -30 | tr '\n' ' ')
             echo "::notice title=Ekrandaki yazılar::$yazi"
           fi
+          if [ -f sonuc.txt ] || [ ! -f pid.txt ]; then exit 1; fi
+
+  # Yalnız açılış testini geçen APK Releases bölümüne konur
+  yayinla:
+    needs: acilis-testi
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: okindo-apk
+
+      - name: APK'yı Releases bölümüne koy
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "apk-${{ github.run_number }}" okindo.apk \
+            --repo "${{ github.repository }}" \
+            --title "okindo APK #${{ github.run_number }}" \
+            --notes "Sanal telefonda açılış testini geçti. Telefona kurmak için aşağıdaki okindo.apk dosyasına dokun." \
+            --latest
