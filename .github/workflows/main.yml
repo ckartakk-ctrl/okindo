@@ -60,10 +60,14 @@ jobs:
           echo 'reactNativeArchitectures=armeabi-v7a,arm64-v8a,x86_64' >> android/gradle.properties
 
       - name: APK derle
+        env:
+          GRADLE_OPTS: -Xmx6g -XX:MaxMetaspaceSize=1g -Dorg.gradle.jvmargs=-Xmx6g
+          NODE_OPTIONS: --max-old-space-size=4096
         run: |
           set -o pipefail
           cd android
-          ./gradlew assembleRelease --no-daemon 2>&1 | tee ../gradle.log
+          echo "::notice title=gradle.properties::$(grep -E 'jvmargs|Architectures' gradle.properties | tr '\n' ' ')"
+          ./gradlew assembleRelease --no-daemon --max-workers=2 -Dorg.gradle.jvmargs="-Xmx6g -XX:MaxMetaspaceSize=1g" 2>&1 | tee ../gradle.log
 
       # Hata olursa son satırları, Actions sayfasındaki "Annotations" bölümüne yazar
       - name: Hata özetini göster
