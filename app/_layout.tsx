@@ -18,7 +18,7 @@ function HataEkrani({ baslik, mesaj, tekrar }: { baslik: string; mesaj: string; 
         <Text style={stil.baslik}>{baslik}</Text>
         <Text style={stil.metin}>Bu ekranın görüntüsünü alıp gönderirsen sorunu hemen düzeltebiliriz.</Text>
         <View style={[stil.kart, { backgroundColor: renk.hataAcik, borderColor: renk.hataAcik }]}>
-          <Text selectable style={{ fontSize: 13, color: renk.metin }}>{mesaj}</Text>
+          <Text selectable style={{ fontSize: 14, lineHeight: 20, color: renk.metin }}>{mesaj}</Text>
         </View>
         {tekrar ? <Dugme onPress={tekrar}>Tekrar dene</Dugme> : null}
       </ScrollView>
@@ -56,7 +56,7 @@ function Yonlendirici() {
         headerStyle: { backgroundColor: renk.zemin },
         headerShadowVisible: false,
         headerTintColor: renk.metin,
-        headerTitleStyle: { fontFamily: yazi.kalin, fontSize: 18 },
+        headerTitleStyle: { fontFamily: yazi.kalin, fontWeight: '600', fontSize: 18 },
         headerBackTitle: 'Geri',
         contentStyle: { backgroundColor: renk.zemin },
       }}
@@ -67,7 +67,8 @@ function Yonlendirici() {
       <Stack.Screen name="hizmet/[id]" options={{ title: '' }} />
       <Stack.Screen name="talep" options={{ title: 'Talebi tamamla' }} />
       <Stack.Screen name="adres-ekle" options={{ title: 'Adres ekle', presentation: 'modal' }} />
-      <Stack.Screen name="is/[id]" options={{ title: 'İş' }} />
+      <Stack.Screen name="is/[id]" options={{ title: '' }} />
+      <Stack.Screen name="hv/[id]" options={{ title: '' }} />
       <Stack.Screen name="hv-basvuru" options={{ title: 'okindo’da iş al' }} />
       <Stack.Screen name="egitim" options={{ title: 'Eğitim' }} />
       <Stack.Screen name="bildirimler" options={{ title: 'Bildirimler' }} />

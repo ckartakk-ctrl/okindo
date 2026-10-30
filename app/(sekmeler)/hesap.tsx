@@ -1,14 +1,15 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Linking, Pressable, Text, View } from 'react-native';
-import { Ekran, Grup, GrupSatiri, Kart, OkDamgasi, onayla, renk, Rozet, Simge, Tutar, yazi } from '@/components/ui';
+import { Avatar, BilgiSatiri, bosluk, Ekran, Grup, GrupSatiri, hataGoster, Kart, onayla, renk, Rozet, Simge, stil, Tutar, yazi } from '@/components/ui';
+import { profilFotoAdresi, profilFotoYukle } from '@/lib/foto';
 import { tl } from '@/lib/bicim';
 import { useOturum, type Mod } from '@/lib/oturum';
 import { rpc, supabase } from '@/lib/supabase';
 import type { Kupon } from '@/lib/tipler';
 
 export default function Hesap() {
-  const { profil, mod, modDegistir, cikis } = useOturum();
+  const { profil, mod, modDegistir, cikis, profilYenile } = useOturum();
   const [kuponlar, setKuponlar] = useState<Kupon[]>([]);
   const [okunmamis, setOkunmamis] = useState(0);
   const [destek, setDestek] = useState<string | null>(null);
@@ -34,39 +35,42 @@ export default function Hesap() {
 
   if (!profil) return null;
 
-  const basHarf = (profil.ad ?? '?').slice(0, 1).toLocaleUpperCase('tr-TR');
   const hvAktif = profil.hv_durum === 'aktif';
 
   return (
     <Ekran yenile={yukle}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 4 }}>
-        <View>
-          <View
-            style={{
-              width: 64,
-              height: 64,
-              borderRadius: 32,
-              backgroundColor: renk.anaKoyu,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Text style={{ fontFamily: yazi.baslik, fontSize: 28, color: '#FFFFFF' }}>{basHarf}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: bosluk.l, paddingVertical: bosluk.xs }}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={profil.foto_yolu ? 'Profil fotoğrafını değiştir' : 'Profil fotoğrafı ekle'}
+          onPress={async () => {
+            try {
+              if (await profilFotoYukle(profil.id)) await profilYenile();
+            } catch (e) {
+              hataGoster(e);
+            }
+          }}
+        >
+          <Avatar ad={profil.ad ?? '?'} foto={profilFotoAdresi(profil.foto_yolu)} boyut={72} onayli={hvAktif} />
+          <View style={{ position: 'absolute', left: -4, bottom: -4, width: 28, height: 28, borderRadius: 14, backgroundColor: renk.kart, borderWidth: 1, borderColor: renk.cizgi, alignItems: 'center', justifyContent: 'center' }}>
+            <Simge ad="camera" boyut={16} renkli={renk.anaKoyu} />
           </View>
-          {hvAktif ? (
-            <View style={{ position: 'absolute', right: -8, bottom: -6 }}>
-              <OkDamgasi boyut={28} />
-            </View>
-          ) : null}
-        </View>
-        <View style={{ flex: 1, gap: 4 }}>
-          <Text style={{ fontFamily: yazi.kalin, fontSize: 20, color: renk.metin }}>
+        </Pressable>
+        <View style={{ flex: 1, gap: bosluk.xs }}>
+          <Text style={[stil.altBaslik]}>
             {profil.ad} {profil.soyad ?? ''}
           </Text>
-          <Text style={{ fontSize: 14, color: renk.soluk }}>{profil.telefon ? `+${profil.telefon.replace(/^\+/, '')}` : ''}</Text>
+          <Text style={[stil.ikincil, { color: renk.soluk }]}>{profil.telefon ? `+${profil.telefon.replace(/^\+/, '')}` : ''}</Text>
           {hvAktif ? <Rozet tur="damga">Onaylı hizmet veren</Rozet> : null}
         </View>
       </View>
+      {hvAktif && !profil.foto_yolu ? (
+        <Kart vurgu="damga">
+          <BilgiSatiri simge="camera-outline" renkli="#6E5200">
+            Fotoğraflı profiller daha çok tercih edilir. Yüzünün net göründüğü bir fotoğraf ekle.
+          </BilgiSatiri>
+        </Kart>
+      ) : null}
 
       {profil.hv_durum !== 'yok' ? (
         <ModSecici mod={mod} sec={(m) => {
@@ -77,8 +81,8 @@ export default function Hesap() {
         <Kart vurgu="koyu" onPress={() => router.push('/hv-basvuru')}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
             <View style={{ flex: 1, gap: 4 }}>
-              <Text style={{ fontFamily: yazi.kalin, fontSize: 17, color: '#FFFFFF' }}>okindo’da iş al</Text>
-              <Text style={{ fontSize: 13, lineHeight: 18, color: '#BFE0D8' }}>
+              <Text style={[stil.altBaslik, { color: '#FFFFFF' }]}>okindo’da iş al</Text>
+              <Text style={[stil.ikincil, { color: '#CFE9E2' }]}>
                 Elinden gelen işi, mahallende kayıtlı ve sigortalı ek gelire çevir.
               </Text>
             </View>
@@ -129,9 +133,10 @@ export default function Hesap() {
           ok={false}
           onPress={async () => {
             const tamam = await onayla(
-              'Hesabını sil',
-              'Hesabın ve kişisel bilgilerin silinir. Yasal olarak saklamamız gereken fatura kayıtları süresi dolana kadar kalır.',
+              `“${[profil.ad, profil.soyad].filter(Boolean).join(' ')}” hesabını sil`,
+              'Hesabın ve kişisel bilgilerin silinir. Yasal olarak saklamamız gereken fatura kayıtları süresi dolana kadar kalır. Bu işlem geri alınamaz.',
               'Hesabımı sil',
+              true,
             );
             if (!tamam) return;
             await rpc('hesap_silme_istegi');
@@ -151,24 +156,25 @@ function ModSecici({ mod, sec }: { mod: Mod; sec: (m: Mod) => void }) {
     { deger: 'hv', ad: 'Hizmet veriyorum' },
   ];
   return (
-    <View style={{ flexDirection: 'row', backgroundColor: '#DDE6E3', borderRadius: 16, padding: 4 }}>
+    <View accessibilityRole="radiogroup" style={{ flexDirection: 'row', backgroundColor: '#DDE6E3', borderRadius: 12, padding: bosluk.xs }}>
       {secenekler.map((s) => {
         const aktif = s.deger === mod;
         return (
           <Pressable
             key={s.deger}
-            accessibilityRole="button"
-            accessibilityState={{ selected: aktif }}
+            accessibilityRole="radio"
+            accessibilityState={{ checked: aktif }}
             onPress={() => !aktif && sec(s.deger)}
             style={{
               flex: 1,
-              paddingVertical: 12,
-              borderRadius: 12,
+              minHeight: 44,
+              justifyContent: 'center',
+              borderRadius: 8,
               alignItems: 'center',
               backgroundColor: aktif ? renk.kart : 'transparent',
             }}
           >
-            <Text style={{ fontFamily: yazi.kalin, fontSize: 15, color: aktif ? renk.anaKoyu : renk.soluk }}>{s.ad}</Text>
+            <Text style={{ fontSize: 16, fontWeight: aktif ? '600' : '500', color: aktif ? renk.anaKoyu : renk.soluk }}>{s.ad}</Text>
           </Pressable>
         );
       })}

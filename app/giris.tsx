@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BilgiSatiri, bosluk, Dugme, Girdi, OkDamgasi, renk, useAcikDurumCubugu, yazi } from '@/components/ui';
+import { BilgiSatiri, bosluk, Dugme, Girdi, OkDamgasi, renk, stil, useAcikDurumCubugu, yazi } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
 
 /** Telefon numarasını +90 ile başlayan biçime çevirir: "0532 123 45 67" → "+905321234567" */
@@ -43,11 +43,11 @@ export default function Giris() {
       <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
         <View style={{ flex: 1, justifyContent: 'flex-end', paddingTop: kenar.top + 40, paddingHorizontal: bosluk.xl, paddingBottom: 36 }}>
           <OkDamgasi boyut={88} />
-          <Text style={{ fontFamily: yazi.baslik, fontSize: 52, lineHeight: 56, color: '#FFFFFF', letterSpacing: -1.5, marginTop: 28 }}>
+          <Text style={{ fontFamily: yazi.baslik, fontWeight: '600', fontSize: 52, lineHeight: 56, color: '#FFFFFF', letterSpacing: -1, marginTop: 24 }}>
             okindo
           </Text>
-          <Text style={{ fontFamily: yazi.yari, fontSize: 22, color: renk.damga, marginTop: 2 }}>okindo’ysa OK.</Text>
-          <Text style={{ fontSize: 16, lineHeight: 23, color: '#BFE0D8', marginTop: 14, maxWidth: 320 }}>
+          <Text style={{ fontFamily: yazi.yari, fontWeight: '600', fontSize: 24, lineHeight: 28, color: renk.damga, marginTop: 4 }}>okindo’ysa OK.</Text>
+          <Text style={{ fontSize: 16, lineHeight: 24, color: '#CFE9E2', marginTop: 12, maxWidth: 320 }}>
             Mahallendeki küçük işler için tanıdık, güvenilir eller. Fiyatı baştan gör, gönlün rahat olsun.
           </Text>
         </View>
@@ -64,24 +64,25 @@ export default function Giris() {
         >
           {!gonderildi ? (
             <>
-              <Text style={{ fontFamily: yazi.kalin, fontSize: 20, color: renk.metin, marginBottom: 4 }}>Telefonunla gir</Text>
+              <Text accessibilityRole="header" style={stil.altBaslik}>Telefonunla gir</Text>
               <Girdi
                 etiket="Cep telefonun"
                 placeholder="05xx xxx xx xx"
+                dogrula={(d) => (d && !telefonDuzelt(d) ? 'Cep telefonunu 05xx xxx xx xx biçiminde yaz.' : null)}
                 keyboardType="phone-pad"
                 autoComplete="tel"
                 value={telefon}
                 onChangeText={setTelefon}
               />
-              <Dugme simge="chatbubble-ellipses-outline" onPress={kodGonder}>
+              <Dugme simge="chatbubble-ellipses-outline" eksik={!telefonDuzelt(telefon) ? 'Cep telefonunu 05xx xxx xx xx biçiminde yaz.' : null} onPress={kodGonder}>
                 Kodu gönder
               </Dugme>
               <BilgiSatiri simge="lock-closed-outline">Numaran hizmet verene hiçbir zaman gösterilmez.</BilgiSatiri>
             </>
           ) : (
             <>
-              <Text style={{ fontFamily: yazi.kalin, fontSize: 20, color: renk.metin }}>Kodu yaz</Text>
-              <Text style={{ fontSize: 15, lineHeight: 21, color: renk.soluk, marginBottom: 4 }}>
+              <Text accessibilityRole="header" style={stil.altBaslik}>Kodu yaz</Text>
+              <Text style={[stil.metin, { color: renk.soluk }]}>
                 {okunur(gonderildi)} numarasına 6 haneli bir kod gönderdik.
               </Text>
               <Girdi
@@ -92,13 +93,13 @@ export default function Giris() {
                 maxLength={6}
                 value={kod}
                 onChangeText={setKod}
-                style={{ letterSpacing: 8, fontSize: 22, fontWeight: '700' }}
+                style={{ letterSpacing: 8, fontSize: 24, fontWeight: '600' }}
               />
-              <Dugme onPress={kodDogrula} pasif={kod.trim().length < 6}>
+              <Dugme onPress={kodDogrula} eksik={kod.trim().length < 6 ? 'Kod 6 haneli olmalı.' : null}>
                 Giriş yap
               </Dugme>
               <Dugme
-                tur="ikincil"
+                tur="metin"
                 onPress={() => {
                   setKod('');
                   setGonderildi(null);

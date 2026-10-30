@@ -1,9 +1,23 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { View } from 'react-native';
+import { Fragment, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { FiyatKarti } from '@/components/FiyatKarti';
 import { HvKartGorunumu } from '@/components/HvKartGorunumu';
-import { AltBaslik, Dugme, Ekran, Kart, Metin, Rozet, Secenekler, Yukleniyor } from '@/components/ui';
+import {
+  BilgiSatiri,
+  bosluk,
+  Dugme,
+  Ekran,
+  Kart,
+  Metin,
+  renk,
+  Rozet,
+  Secenekler,
+  Simge,
+  stil,
+  Tutar,
+  Yukleniyor,
+} from '@/components/ui';
 import { gunAdi, tl } from '@/lib/bicim';
 import { rpc, supabase } from '@/lib/supabase';
 import type { Adres, FiyatDokumu, Hizmet, UygunHv } from '@/lib/tipler';
@@ -19,6 +33,23 @@ function gunler(): Date[] {
   });
 }
 
+/** Seçilebilir satır: radyo düğmesi + içerik (adres ve kişi seçimi için) */
+function SecimSatiri({ secili, sec, children, etiket }: { secili: boolean; sec: () => void; children: ReactNode; etiket: string }) {
+  return (
+    <Pressable
+      accessibilityRole="radio"
+      accessibilityLabel={etiket}
+      accessibilityState={{ checked: secili }}
+      onPress={sec}
+      style={({ pressed }) => [stil.grupSatiri, { alignItems: 'center' }, secili && { backgroundColor: '#F4FAF8' }, pressed && { backgroundColor: '#EEF5F3' }]}
+    >
+      <View style={[stil.radyo, secili && { borderColor: renk.ana }]}>{secili ? <View style={stil.radyoIc} /> : null}</View>
+      <View style={{ flex: 1 }}>{children}</View>
+    </Pressable>
+  );
+}
+
+/** Form kalıbı: adres, zaman ve kişi seçip talebi aç */
 export default function TalepEkrani() {
   const p = useLocalSearchParams<Parametreler>();
   const saat = p.saat ? Number(p.saat) : null;
@@ -54,7 +85,8 @@ export default function TalepEkrani() {
     const { data } = await supabase.from('adresler').select('*').order('olusturma_at');
     const liste = (data as Adres[]) ?? [];
     setAdresler(liste);
-    setAdres((once) => once ?? liste[0]?.id ?? null);
+    // Varsayılan: en son eklenen adres (yeni eklediysen o seçili gelir)
+    setAdres((once) => (once && liste.some((a) => a.id === once) ? once : (liste[liste.length - 1]?.id ?? null)));
   }, []);
   useFocusEffect(
     useCallback(() => {
@@ -89,7 +121,7 @@ export default function TalepEkrani() {
     return liste;
   }, [gun, sureDk]);
 
-  if (!hizmet) return <Yukleniyor />;
+  if (!hizmet) return <Yukleniyor tur="form" />;
 
   const duzenliOlabilir = hizmet.fiyat_tipi === 'saatli' && hizmet.kategoriler.ad === 'Temizlik ve düzen';
   const secilenHv = hvler.find((h) => h.hv_id === hv) ?? null;
@@ -101,12 +133,17 @@ export default function TalepEkrani() {
     return d.toISOString();
   }
 
+  const eksik = !adres
+    ? 'Önce işin yapılacağı adresi ekle.'
+    : !acil && baslangicSaati === null
+      ? 'Bir başlangıç saati seç.'
+      : tekrar !== 'yok' && !hv
+        ? 'Düzenli işte her seferinde aynı kişi gelir; listeden birini seç.'
+        : null;
+
   async function talepAc() {
-    if (!adres) throw new Error('Bir adres seçmelisin.');
-    if (!acil && baslangicSaati === null) throw new Error('Bir saat seçmelisin.');
     let isId: string;
     if (tekrar !== 'yok') {
-      if (!hv) throw new Error('Düzenli işte her seferinde aynı kişi gelir; listeden birini seç.');
       const seri = await rpc<string>('duzenli_baslat', {
         p_hizmet: p.hizmetId,
         p_adres: adres,
@@ -134,65 +171,125 @@ export default function TalepEkrani() {
     router.push({ pathname: '/is/[id]', params: { id: isId } });
   }
 
-  return (
-    <Ekran>
-      <AltBaslik>Adres</AltBaslik>
-      {adresler.length ? (
-        <Secenekler
-          secenekler={adresler.map((a) => ({ deger: a.id, ad: `${a.baslik} · ${a.acik_adres}` }))}
-          secili={adres}
-          sec={setAdres}
-        />
-      ) : (
-        <Metin soluk>Henüz kayıtlı adresin yok.</Metin>
-      )}
-      <Dugme tur="ikincil" onPress={() => router.push('/adres-ekle')}>
-        Yeni adres ekle
-      </Dugme>
-
-      {!acil ? (
-        <>
-          <AltBaslik>Gün ve saat</AltBaslik>
-          <Secenekler
-            secenekler={gunler().map((d) => ({ deger: d.toISOString(), ad: gunAdi(d) }))}
-            secili={gun}
-            sec={(g) => {
-              setGun(g);
-              setBaslangicSaati(null);
-            }}
-          />
-          {saatler.length ? (
-            <Secenekler
-              secenekler={saatler.map((s) => ({ deger: String(s), ad: `${String(s).padStart(2, '0')}:00` }))}
-              secili={baslangicSaati === null ? null : String(baslangicSaati)}
-              sec={(s) => setBaslangicSaati(Number(s))}
-            />
+  const alt = (
+    <>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: bosluk.m }}>
+        <View style={{ flex: 1 }}>
+          <Text style={[stil.meta, { color: renk.soluk }]}>{testOdeme ? 'Test ödemesi, para çekilmez' : 'KDV dahil'}</Text>
+          {fiyat ? (
+            <Tutar boyut={24} renkli={renk.anaKoyu}>
+              {tl(fiyat.musteri_toplam_kd)}
+            </Tutar>
           ) : (
-            <Metin soluk>Bu gün için uygun saat kalmadı. İşler 08:00 ile 22:00 arasında yapılır.</Metin>
+            <Text style={[stil.metin, { color: renk.soluk }]}>Hesaplanıyor</Text>
           )}
-        </>
-      ) : (
-        <Kart vurgu="uyari">
-          <Metin>Acil talep: şu an müsait olan en yakın kişiye gider.</Metin>
-        </Kart>
-      )}
+        </View>
+        <View style={{ flex: 1.3 }}>
+          <Dugme simge="checkmark-circle" eksik={eksik} onPress={talepAc}>
+            Talebi aç
+          </Dugme>
+        </View>
+      </View>
+    </>
+  );
 
-      <AltBaslik>Kim gelsin?</AltBaslik>
-      <Kart onPress={() => setHv(null)} vurgu={hv === null ? 'ana' : undefined}>
-        <Metin kalin>En uygun kişiyi okindo bulsun</Metin>
-        <Metin soluk kucuk>Talep yakınındaki müsait kişilere gider; ilk kabul eden gelir. Yol ücreti yok.</Metin>
-      </Kart>
-      {hvler.map((h) => (
-        <Kart key={h.hv_id} onPress={() => setHv(h.hv_id)} vurgu={hv === h.hv_id ? 'ana' : undefined}>
-          <HvKartGorunumu kart={h.kart} />
-          <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
-            {h.komsu ? <Rozet>Komşun</Rozet> : null}
-            {!h.musait ? <Rozet tur="soluk">Şu an müsait değil</Rozet> : null}
-            {h.yol_kd > 0 ? <Rozet tur="uyari">{`Yol ${tl(h.yol_kd)}`}</Rozet> : null}
-          </View>
-        </Kart>
-      ))}
-      {hv ? <Metin soluk kucuk>Seçtiğin kişi 10 dakika içinde kabul etmezse talep diğer uygun kişilere açılır.</Metin> : null}
+  return (
+    <Ekran alt={alt}>
+      <Text accessibilityRole="header" style={stil.baslik}>
+        {hizmet.ad}
+      </Text>
+
+      {/* 1. Adres */}
+      <View style={{ gap: bosluk.s }}>
+        <Text style={stil.altBaslik}>Nereye?</Text>
+        <View style={stil.grup}>
+          {adresler.map((a, i) => (
+            <Fragment key={a.id}>
+              {i > 0 ? <View style={stil.ayirici} /> : null}
+              <SecimSatiri secili={adres === a.id} sec={() => setAdres(a.id)} etiket={`${a.baslik}, ${a.acik_adres}`}>
+                <Text style={[stil.metin, { fontWeight: '600' }]}>{a.baslik}</Text>
+                <Text style={[stil.ikincil, { color: renk.soluk }]} numberOfLines={2}>
+                  {a.acik_adres}
+                </Text>
+              </SecimSatiri>
+            </Fragment>
+          ))}
+          {adresler.length ? <View style={stil.ayirici} /> : null}
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push('/adres-ekle')}
+            style={({ pressed }) => [stil.grupSatiri, pressed && { backgroundColor: '#F2F6F5' }]}
+          >
+            <View style={stil.simgeKutusu}>
+              <Simge ad="add" boyut={20} renkli={renk.ana} />
+            </View>
+            <Text style={[stil.metin, { fontWeight: '600', color: renk.ana, flex: 1 }]}>Yeni adres ekle</Text>
+          </Pressable>
+        </View>
+      </View>
+
+      {/* 2. Zaman */}
+      <View style={{ gap: bosluk.s }}>
+        <Text style={stil.altBaslik}>Ne zaman?</Text>
+        {!acil ? (
+          <>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={{ marginHorizontal: -bosluk.l }}
+              contentContainerStyle={{ paddingHorizontal: bosluk.l, gap: bosluk.s }}
+            >
+              {gunler().map((d) => {
+                const secili = d.toISOString() === gun;
+                const [ust, altYazi] = gunAdi(d).includes(' ') ? gunAdi(d).split(' ') : [gunAdi(d), String(d.getDate())];
+                return (
+                  <Pressable
+                    key={d.toISOString()}
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: secili }}
+                    accessibilityLabel={gunAdi(d)}
+                    onPress={() => {
+                      setGun(d.toISOString());
+                      setBaslangicSaati(null);
+                    }}
+                    style={{
+                      width: 64,
+                      paddingVertical: bosluk.m,
+                      borderRadius: 12,
+                      alignItems: 'center',
+                      gap: bosluk.xs,
+                      backgroundColor: secili ? renk.anaKoyu : renk.kart,
+                      borderWidth: 1,
+                      borderColor: secili ? renk.anaKoyu : renk.cizgi,
+                    }}
+                  >
+                    <Text style={[stil.ikincil, { color: secili ? '#CFE9E2' : renk.soluk }]}>{ust}</Text>
+                    <Text style={[stil.metin, { fontWeight: '600', color: secili ? '#FFFFFF' : renk.metin }]}>{altYazi}</Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+            {saatler.length ? (
+              <Secenekler
+                etiket="Başlangıç saati"
+                secenekler={saatler.map((s) => ({ deger: String(s), ad: `${String(s).padStart(2, '0')}:00` }))}
+                secili={baslangicSaati === null ? null : String(baslangicSaati)}
+                sec={(s) => setBaslangicSaati(Number(s))}
+              />
+            ) : (
+              <Kart>
+                <BilgiSatiri simge="moon-outline">Bu gün için uygun saat kalmadı. İşler 08:00 ile 22:00 arasında yapılır; başka bir gün seç.</BilgiSatiri>
+              </Kart>
+            )}
+          </>
+        ) : (
+          <Kart vurgu="uyari">
+            <BilgiSatiri simge="flash-outline" renkli={renk.uyari}>
+              Acil talep: şu an müsait olan en yakın kişiye gider.
+            </BilgiSatiri>
+          </Kart>
+        )}
+      </View>
 
       {duzenliOlabilir && !acil ? (
         <Secenekler
@@ -208,29 +305,46 @@ export default function TalepEkrani() {
       ) : null}
       {tekrar !== 'yok' ? (
         <Metin soluk kucuk>
-          Her seferinde aynı kişi gelir ve saatin ona ayrılır. Bir seansı 24 saat öncesine kadar ücretsiz atlayabilir, düzenli işi
-          istediğin an bırakabilirsin.
+          Her seferinde aynı kişi gelir ve saatin ona ayrılır. Bir seansı 24 saat öncesine kadar ücretsiz atlayabilir, düzenli işi istediğin an
+          bırakabilirsin.
         </Metin>
       ) : null}
 
+      {/* 3. Kişi */}
+      <View style={{ gap: bosluk.s }}>
+        <Text style={stil.altBaslik}>Kim gelsin?</Text>
+        <View style={stil.grup}>
+          <SecimSatiri secili={hv === null} sec={() => setHv(null)} etiket="En uygun kişiyi okindo bulsun">
+            <Text style={[stil.metin, { fontWeight: '600' }]}>En uygun kişiyi okindo bulsun</Text>
+            <Text style={[stil.ikincil, { color: renk.soluk }]}>Yakınındaki müsait kişilere gider, ilk kabul eden gelir. Yol ücreti yok.</Text>
+          </SecimSatiri>
+          {hvler.map((h) => (
+            <Fragment key={h.hv_id}>
+              <View style={stil.ayirici} />
+              <SecimSatiri secili={hv === h.hv_id} sec={() => setHv(h.hv_id)} etiket={h.kart.ad}>
+                <View style={{ gap: bosluk.s }}>
+                  <HvKartGorunumu kart={h.kart} />
+                  {h.komsu || !h.musait || h.yol_kd > 0 ? (
+                    <View style={{ flexDirection: 'row', gap: bosluk.s, flexWrap: 'wrap' }}>
+                      {h.komsu ? <Rozet>Komşun</Rozet> : null}
+                      {!h.musait ? <Rozet tur="soluk">Şu an müsait değil</Rozet> : null}
+                      {h.yol_kd > 0 ? <Rozet tur="uyari">{`Yol ${tl(h.yol_kd)}`}</Rozet> : null}
+                    </View>
+                  ) : null}
+                </View>
+              </SecimSatiri>
+            </Fragment>
+          ))}
+        </View>
+        {hv ? <Metin soluk kucuk>Seçtiğin kişi 10 dakika içinde kabul etmezse talep diğer uygun kişilere açılır.</Metin> : null}
+        {secilenHv && !secilenHv.musait ? <Metin soluk kucuk>Seçtiğin kişi şu an müsait görünmüyor; yine de talebini görebilir.</Metin> : null}
+      </View>
+
       {fiyat ? <FiyatKarti fiyat={fiyat} /> : null}
-      {secilenHv && !secilenHv.musait ? (
-        <Metin soluk kucuk>Seçtiğin kişi şu an müsait görünmüyor; yine de talebini görebilir.</Metin>
-      ) : null}
 
-      {testOdeme ? (
-        <Kart vurgu="uyari">
-          <Metin kalin>Test ödemesi</Metin>
-          <Metin kucuk>Pilot testinde kartından gerçek para çekilmez.</Metin>
-        </Kart>
-      ) : null}
-
-      <Dugme onPress={talepAc} pasif={!adres || (!acil && baslangicSaati === null)}>
-        {fiyat ? `Talebi aç · ${tl(fiyat.musteri_toplam_kd)}` : 'Talebi aç'}
-      </Dugme>
-      <Metin soluk kucuk>
+      <BilgiSatiri simge="card-outline">
         Tutar kartında bloke edilir, iş bitip sen onaylayana kadar çekilmez. İşe 2 saatten fazla varken iptal ücretsizdir.
-      </Metin>
+      </BilgiSatiri>
     </Ekran>
   );
 }

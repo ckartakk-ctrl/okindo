@@ -1,17 +1,19 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { Text, View } from 'react-native';
 import { FiyatKarti } from '@/components/FiyatKarti';
-import { AltBaslik, Baslik, Dugme, Ekran, Girdi, Kart, Metin, Secenekler, Yukleniyor } from '@/components/ui';
-import { saatMetni } from '@/lib/bicim';
+import { kategoriSimgesi } from '@/components/MusteriAnasayfa';
+import { BilgiSatiri, bosluk, Dugme, Ekran, Girdi, Kart, Metin, renk, Secenekler, Simge, stil, Tutar, Yukleniyor } from '@/components/ui';
+import { saatMetni, tl } from '@/lib/bicim';
 import { rpc, supabase } from '@/lib/supabase';
 import type { FiyatDokumu, Hizmet } from '@/lib/tipler';
 
 const saatSecenekleri = [2, 2.5, 3, 3.5, 4, 5, 6];
 
+/** Form kalıbı: hizmeti tarif et, fiyatı gör, devam et */
 export default function HizmetEkrani() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const [hizmet, setHizmet] = useState<Hizmet | null>(null);
+  const [hizmet, setHizmet] = useState<(Hizmet & { kategoriler: { ad: string } | null }) | null>(null);
   const [cevaplar, setCevaplar] = useState<Record<string, string>>({});
   const [saat, setSaat] = useState<number>(2);
   const [acil, setAcil] = useState(false);
@@ -22,10 +24,10 @@ export default function HizmetEkrani() {
   useEffect(() => {
     supabase
       .from('hizmetler')
-      .select('*')
+      .select('*, kategoriler(ad)')
       .eq('id', id)
       .single()
-      .then(({ data }) => setHizmet(data as Hizmet));
+      .then(({ data }) => setHizmet(data as Hizmet & { kategoriler: { ad: string } | null }));
   }, [id]);
 
   useEffect(() => {
@@ -40,71 +42,26 @@ export default function HizmetEkrani() {
       .catch((e: Error) => setFiyatHatasi(e.message));
   }, [hizmet, saat, acil]);
 
-  if (!hizmet) return <Yukleniyor />;
+  if (!hizmet) return <Yukleniyor tur="form" />;
 
-  const sorularTamam = hizmet.sorular.every((s) => cevaplar[s.id]);
+  const eksikSoru = hizmet.sorular.find((s) => !cevaplar[s.id]);
 
-  return (
-    <Ekran>
-      <Stack.Screen options={{ title: hizmet.ad }} />
-      <Baslik alt={hizmet.aciklama ?? undefined}>{hizmet.ad}</Baslik>
-
-      {hizmet.sorular.map((s) => (
-        <Secenekler
-          key={s.id}
-          etiket={s.soru}
-          secenekler={s.secenekler.map((c) => ({ deger: c, ad: c }))}
-          secili={cevaplar[s.id]}
-          sec={(c) => setCevaplar({ ...cevaplar, [s.id]: c })}
-        />
-      ))}
-
-      {hizmet.fiyat_tipi === 'saatli' ? (
-        <Secenekler
-          etiket="Ne kadar sürsün?"
-          secenekler={saatSecenekleri.map((s) => ({ deger: String(s), ad: saatMetni(s) }))}
-          secili={String(saat)}
-          sec={(s) => setSaat(Number(s))}
-        />
-      ) : null}
-
-      <Secenekler
-        etiket="Ne zaman?"
-        secenekler={[
-          { deger: 'hayir', ad: 'Bir gün ve saat seçeceğim' },
-          { deger: 'evet', ad: 'Acil, hemen' },
-        ]}
-        secili={acil ? 'evet' : 'hayir'}
-        sec={(d) => setAcil(d === 'evet')}
-      />
-
-      <Girdi
-        etiket="Eklemek istediğin bir şey var mı? (isteğe bağlı)"
-        placeholder="Örnek: Mutfak lavabosu, sol taraftaki musluk"
-        value={aciklama}
-        onChangeText={setAciklama}
-        multiline
-      />
-
-      {fiyatHatasi ? (
-        <Kart vurgu="hata">
-          <Metin>{fiyatHatasi}</Metin>
-        </Kart>
-      ) : fiyat ? (
-        <>
-          <AltBaslik>Fiyat</AltBaslik>
-          {fiyat.buyuk_is_uyarisi ? (
-            <Kart vurgu="uyari">
-              <Metin>okindo küçük işler içindir. Devam edebilirsin; talebini biz de inceleyeceğiz.</Metin>
-            </Kart>
-          ) : null}
-          <FiyatKarti fiyat={fiyat} />
-        </>
-      ) : null}
-
-      <View style={{ gap: 8, marginTop: 8 }}>
+  const alt = (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: bosluk.m }}>
+      <View style={{ flex: 1 }}>
+        <Text style={[stil.meta, { color: renk.soluk }]}>KDV dahil</Text>
+        {fiyat ? (
+          <Tutar boyut={24} renkli={renk.anaKoyu}>
+            {tl(fiyat.musteri_toplam_kd)}
+          </Tutar>
+        ) : (
+          <Text style={[stil.metin, { color: renk.soluk }]}>Hesaplanıyor</Text>
+        )}
+      </View>
+      <View style={{ flex: 1.3 }}>
         <Dugme
-          pasif={!fiyat || !sorularTamam}
+          simge="arrow-forward"
+          eksik={fiyatHatasi ? fiyatHatasi : !fiyat ? 'Fiyat hesaplanıyor, bir saniye.' : eksikSoru ? `Önce “${eksikSoru.soru}” sorusunu cevapla.` : null}
           onPress={() =>
             router.push({
               pathname: '/talep',
@@ -118,13 +75,92 @@ export default function HizmetEkrani() {
             })
           }
         >
-          {sorularTamam ? 'İşi yaptır' : 'Önce soruları cevapla'}
+          Gün ve adres seç
         </Dugme>
-        <Metin soluk kucuk>
-          Sadece fiyat öğrenmek istediysen hiçbir şey yapmana gerek yok. Talep açmadıkça kimseye bir şey gitmez, kartından para
-          çekilmez.
-        </Metin>
       </View>
+    </View>
+  );
+
+  return (
+    <Ekran alt={alt}>
+      <Stack.Screen options={{ title: '' }} />
+      <View style={{ gap: bosluk.m }}>
+        <View style={[stil.simgeKutusu, { width: 56, height: 56, borderRadius: 16 }]}>
+          <Simge ad={kategoriSimgesi(hizmet.kategoriler?.ad ?? '')} boyut={28} renkli={renk.ana} />
+        </View>
+        <Text accessibilityRole="header" style={stil.baslik}>
+          {hizmet.ad}
+        </Text>
+        {hizmet.aciklama ? <Metin soluk>{hizmet.aciklama}</Metin> : null}
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: bosluk.l, rowGap: bosluk.xs }}>
+          <BilgiSatiri simge="time-outline">
+            {hizmet.fiyat_tipi === 'saatli' ? 'Saatlik ücret' : `Yaklaşık ${Math.round(hizmet.tahmini_dk / 15) * 15} dakika`}
+          </BilgiSatiri>
+          <BilgiSatiri simge="lock-closed-outline">{hizmet.fiyat_tipi === 'saatli' ? 'Süre onayın olmadan uzamaz' : 'Sabit fiyat'}</BilgiSatiri>
+        </View>
+      </View>
+
+      <Kart>
+        {hizmet.sorular.map((s) => (
+          <Secenekler
+            key={s.id}
+            etiket={s.soru}
+            secenekler={s.secenekler.map((c) => ({ deger: c, ad: c }))}
+            secili={cevaplar[s.id]}
+            sec={(c) => setCevaplar({ ...cevaplar, [s.id]: c })}
+          />
+        ))}
+
+        {hizmet.fiyat_tipi === 'saatli' ? (
+          <Secenekler
+            etiket="Ne kadar sürsün?"
+            secenekler={saatSecenekleri.map((s) => ({ deger: String(s), ad: saatMetni(s) }))}
+            secili={String(saat)}
+            sec={(s) => setSaat(Number(s))}
+          />
+        ) : null}
+
+        <Secenekler
+          etiket="Ne zaman?"
+          dikey
+          secenekler={[
+            { deger: 'hayir', ad: 'Gün ve saat seçeceğim', alt: 'Sonraki adımda 7 gün içinden seçersin' },
+            { deger: 'evet', ad: 'Acil, hemen gelsin', alt: 'Şu an müsait en yakın kişiye gider' },
+          ]}
+          secili={acil ? 'evet' : 'hayir'}
+          sec={(d) => setAcil(d === 'evet')}
+        />
+
+        <Girdi
+          etiket="Eklemek istediğin bir şey var mı?"
+          istegeBagli
+          placeholder="Örnek: Mutfak lavabosu, soldaki musluk"
+          value={aciklama}
+          onChangeText={setAciklama}
+          multiline
+        />
+      </Kart>
+
+      {fiyatHatasi ? (
+        <Kart vurgu="hata">
+          <BilgiSatiri simge="alert-circle-outline" renkli={renk.hata}>
+            {fiyatHatasi}
+          </BilgiSatiri>
+        </Kart>
+      ) : fiyat ? (
+        <>
+          {fiyat.buyuk_is_uyarisi ? (
+            <Kart vurgu="uyari">
+              <BilgiSatiri simge="information-circle-outline" renkli={renk.uyari}>
+                okindo küçük işler içindir. Devam edebilirsin; talebini biz de inceleyeceğiz.
+              </BilgiSatiri>
+            </Kart>
+          ) : null}
+          <FiyatKarti fiyat={fiyat} />
+        </>
+      ) : null}
+
+      <Metin soluk kucuk>Talep açmadıkça kimseye bir şey gitmez ve kartından para çekilmez. Sadece fiyata bakabilirsin.</Metin>
     </Ekran>
   );
 }

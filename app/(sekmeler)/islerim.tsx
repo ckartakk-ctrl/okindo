@@ -1,7 +1,7 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { Bos, Dugme, Ekran, Grup, renk, Rozet, Simge, stil, type SimgeAdi } from '@/components/ui';
+import { Bos, bosluk, Dugme, Ekran, Grup, renk, Rozet, Simge, stil, Yukleniyor, type SimgeAdi } from '@/components/ui';
 import { bitmisDurumlar, durumMetni, hvDurumMetni, tl, zaman } from '@/lib/bicim';
 import { useOturum } from '@/lib/oturum';
 import { supabase } from '@/lib/supabase';
@@ -32,7 +32,7 @@ function rozetTuru(d: IsDurumu): 'ana' | 'uyari' | 'soluk' | 'damga' {
 
 export default function Islerim() {
   const { oturum, mod } = useOturum();
-  const [isler, setIsler] = useState<Is[]>([]);
+  const [isler, setIsler] = useState<Is[] | null>(null);
   const ben = oturum!.user.id;
 
   const yukle = useCallback(async () => {
@@ -52,6 +52,8 @@ export default function Islerim() {
     }, [yukle]),
   );
 
+  if (!isler) return <Yukleniyor />;
+
   const devam = isler.filter((i) => !bitmisDurumlar.includes(i.durum));
   const gecmis = isler.filter((i) => bitmisDurumlar.includes(i.durum));
 
@@ -67,7 +69,11 @@ export default function Islerim() {
               <Dugme simge="add" onPress={() => router.push('/')}>
                 İlk işini aç
               </Dugme>
-            ) : undefined
+            ) : (
+              <Dugme simge="notifications-outline" onPress={() => router.push('/')}>
+                Açık talepleri gör
+              </Dugme>
+            )
           }
         />
       </Ekran>
@@ -86,16 +92,16 @@ export default function Islerim() {
         <View style={[stil.simgeKutusu, bitti && { backgroundColor: '#EEF1F0' }]}>
           <Simge ad={durumSimgesi[i.durum]} boyut={19} renkli={bitti ? renk.silik : renk.ana} />
         </View>
-        <View style={{ flex: 1, gap: 6 }}>
+        <View style={{ flex: 1, gap: bosluk.xs }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
-            <Text style={[stil.metin, { fontWeight: '700', flex: 1 }]} numberOfLines={1}>
+            <Text style={[stil.metin, { fontWeight: '600', flex: 1 }]} numberOfLines={1}>
               {i.hizmetler?.ad}
             </Text>
-            <Text style={[stil.metin, { fontWeight: '700', fontVariant: ['tabular-nums'] }]}>
+            <Text style={[stil.metin, { fontWeight: '600', fontVariant: ['tabular-nums'] }]}>
               {mod === 'musteri' ? tl(i.musteri_toplam_kd) : tl(i.hv_tutari_kh + i.yol_kh)}
             </Text>
           </View>
-          <Text style={[stil.metin, { fontSize: 13, color: renk.soluk }]}>
+          <Text style={[stil.ikincil, { color: renk.soluk }]}>
             {zaman(i.planlanan_baslangic)}
             {i.seri_id ? ' · Düzenli' : ''}
           </Text>

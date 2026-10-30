@@ -12,11 +12,11 @@ const indirimAdi: Record<string, string> = {
 /** K2: müşteri KDV dahil son fiyatı ve dökümünü görür */
 export function FiyatKarti({ fiyat }: { fiyat: FiyatDokumu }) {
   return (
-    <Kart stilEk={{ padding: 20 }}>
+    <Kart stilEk={{ padding: 24 }}>
       <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' }}>
-        <View style={{ gap: 2 }}>
-          <Text style={{ fontSize: 14, color: renk.soluk }}>Ödeyeceğin</Text>
-          <Text style={{ fontSize: 12, color: renk.silik }}>KDV dahil</Text>
+        <View style={{ gap: 4 }}>
+          <Text style={{ fontSize: 14, lineHeight: 20, color: renk.soluk }}>Ödeyeceğin</Text>
+          <Text style={{ fontSize: 12, lineHeight: 16, color: renk.soluk }}>KDV dahil</Text>
         </View>
         <View style={{ alignItems: 'flex-end' }}>
           {fiyat.indirim_kd > 0 ? (

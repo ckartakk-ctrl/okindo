@@ -13,6 +13,7 @@ export type Profil = {
   egitim_tamam_at: string | null;
   musait: boolean;
   kurucu: boolean;
+  foto_yolu: string | null;
 };
 
 export type Mahalle = { id: string; ad: string; enlem: number; boylam: number };
@@ -157,3 +158,5 @@ export type Hakedis = {
 
 export type Bildirim = { id: string; baslik: string; metin: string; is_id: string | null; okundu: boolean; olusturma_at: string };
 export type Kupon = { id: string; tutar: number; sebep: string; son_gecerlilik: string; kullanildi_is_id: string | null };
+
+export type HvProfili = HvKarti & { uye_olma: string; puan_sayisi: number; hizmetler: string[]; yorumlar: string[] };

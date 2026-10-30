@@ -329,5 +329,13 @@ set role anon;
 select t_hata('giriş yapmamış kullanıcı talep açamaz', format('select talep_olustur(%L, %L, now())', :'musluk', :'adres1'), 'permission');
 reset role;
 
+\echo '--- 15. HV profili'
+select set_config('request.jwt.claim.sub', :'M1', false); set role authenticated;
+select t('HV profili adı kısaltır', 'true', (select (hv_profili(:'H1')->>'ad') like '% _.' or (hv_profili(:'H1')->>'ad') not like '% %' )::text);
+select t('HV profilinde hizmetler listelenir', 'true', (select jsonb_array_length(hv_profili(:'H1')->'hizmetler') > 0)::text);
+select t('10 puandan önce yorum gösterilmez', '0', (select jsonb_array_length(hv_profili(:'H1')->'yorumlar'))::text);
+select t_hata('olmayan HV profili', format('select hv_profili(%L)', :'M1'), 'görüntülenemiyor');
+reset role;
+
 \echo ''
 \echo 'TÜM TESTLER BAŞARILI'

@@ -1,11 +1,18 @@
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, View } from 'react-native';
-import { AltBaslik, Baslik, Dugme, Ekran, Girdi, Kart, Metin, renk, Secenekler } from '@/components/ui';
+import { Pressable, Text, View } from 'react-native';
+import { BilgiSatiri, bosluk, Dugme, Ekran, Girdi, Kart, renk, Secenekler, Simge, stil } from '@/components/ui';
 import { useOturum } from '@/lib/oturum';
 import { rpc, supabase } from '@/lib/supabase';
 import type { Hizmet, Kategori, Mahalle } from '@/lib/tipler';
 
+const adimlar = [
+  { simge: 'document-text-outline' as const, metin: 'Başvurunu gönder ve yapabildiğin işleri seç.' },
+  { simge: 'people-outline' as const, metin: 'Yüz yüze görüşürüz. Kimliğini ve e-Devlet barkodlu adli sicil kaydını getirirsin, seçtiğin işlerden küçük bir uygulama yaparsın.' },
+  { simge: 'school-outline' as const, metin: '10 dakikalık eğitimi tamamlarsın ve iş almaya başlarsın.' },
+];
+
+/** Form kalıbı: HV başvurusu */
 export default function HvBasvuru() {
   const { profil, profilYenile, modDegistir } = useOturum();
   const [ad, setAd] = useState(profil?.ad ?? '');
@@ -27,32 +34,48 @@ export default function HvBasvuru() {
   }
 
   async function gonder() {
-    if (!mahalle) throw new Error('Mahalleni seçmelisin.');
     await rpc('hv_basvur', { p_ad: ad, p_soyad: soyad, p_mahalle: mahalle, p_etiketler: secili });
     await profilYenile();
     modDegistir('hv');
     router.replace('/');
   }
 
+  const eksik = !ad.trim() ? 'Adını yaz.' : !soyad.trim() ? 'Soyadını yaz.' : !mahalle ? 'Mahalleni seç.' : !secili.length ? 'Yapabildiğin en az bir işi seç.' : null;
+
   return (
-    <Ekran>
-      <Baslik alt="Ek gelir, kendi saatini seç. Talebe bakmak ve iş almak ücretsiz.">Elinden gelen işi gelire çevir</Baslik>
+    <Ekran
+      alt={
+        <Dugme simge="send" eksik={eksik} onPress={gonder}>
+          {secili.length ? `Başvurumu gönder (${secili.length} iş)` : 'Başvurumu gönder'}
+        </Dugme>
+      }
+    >
+      <Text accessibilityRole="header" style={stil.baslik}>
+        Elinden gelen işi gelire çevir
+      </Text>
+      <BilgiSatiri simge="wallet-outline">Kendi saatini seç. Talebe bakmak ve iş almak ücretsiz.</BilgiSatiri>
+
       <Kart>
-        <Metin kalin>Nasıl işliyor?</Metin>
-        <Metin kucuk>1. Başvurunu gönder ve yapabildiğin işleri seç.</Metin>
-        <Metin kucuk>2. Seninle yüz yüze görüşürüz; kimlik ve e-Devlet barkodlu adli sicil kaydını getirirsin, seçtiğin işlerden küçük bir uygulama yaparsın.</Metin>
-        <Metin kucuk>3. 10 dakikalık eğitimi tamamlarsın ve iş almaya başlarsın.</Metin>
+        <Text style={stil.altBaslik}>Nasıl işliyor?</Text>
+        {adimlar.map((a, i) => (
+          <View key={i} style={{ flexDirection: 'row', gap: bosluk.m, alignItems: 'flex-start' }}>
+            <View style={[stil.simgeKutusu, { width: 32, height: 32, borderRadius: 16 }]}>
+              <Text style={[stil.ikincil, { fontWeight: '600', color: renk.anaKoyu }]}>{i + 1}</Text>
+            </View>
+            <Text style={[stil.metin, { flex: 1 }]}>{a.metin}</Text>
+          </View>
+        ))}
       </Kart>
 
-      <Girdi etiket="Adın" value={ad} onChangeText={setAd} />
-      <Girdi etiket="Soyadın" value={soyad} onChangeText={setSoyad} />
+      <Girdi etiket="Adın" value={ad} onChangeText={setAd} autoComplete="given-name" dogrula={(d) => (!d.trim() ? 'Adını yaz.' : null)} />
+      <Girdi etiket="Soyadın" value={soyad} onChangeText={setSoyad} autoComplete="family-name" dogrula={(d) => (!d.trim() ? 'Soyadını yaz.' : null)} />
       <Secenekler etiket="Yaşadığın mahalle" secenekler={mahalleler.map((m) => ({ deger: m.id, ad: m.ad }))} secili={mahalle} sec={setMahalle} />
 
-      <AltBaslik>Hangi işleri yapabilirsin?</AltBaslik>
+      <Text style={stil.altBaslik}>Hangi işleri yapabilirsin?</Text>
       {kategoriler.map((k) => (
-        <View key={k.id} style={{ gap: 6 }}>
-          <Metin soluk kucuk>{k.ad}</Metin>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+        <View key={k.id} style={{ gap: bosluk.s }}>
+          <Text style={stil.etiket}>{k.ad}</Text>
+          <View style={stil.cipler}>
             {hizmetler
               .filter((h) => h.kategori_id === k.id)
               .map((h) => {
@@ -63,30 +86,21 @@ export default function HvBasvuru() {
                     onPress={() => degistir(h.id)}
                     accessibilityRole="checkbox"
                     accessibilityState={{ checked: aktif }}
-                    style={{
-                      paddingHorizontal: 12,
-                      paddingVertical: 8,
-                      borderRadius: 999,
-                      borderWidth: 1,
-                      borderColor: aktif ? renk.ana : renk.cizgi,
-                      backgroundColor: aktif ? renk.ana : renk.kart,
-                    }}
+                    style={[stil.cip, aktif && { backgroundColor: renk.anaKoyu, borderColor: renk.anaKoyu }]}
                   >
-                    <Metin kucuk renkli={aktif ? '#FFFFFF' : undefined}>
-                      {h.ad}
-                    </Metin>
+                    <Simge ad={aktif ? 'checkbox' : 'square-outline'} boyut={16} renkli={aktif ? '#FFFFFF' : renk.silik} />
+                    <Text style={[stil.cipYazi, aktif && { color: '#FFFFFF' }]}>{h.ad}</Text>
                   </Pressable>
                 );
               })}
           </View>
         </View>
       ))}
-      <Metin soluk kucuk>
-        Gaz, kombi, elektrik panosu, dış cephe ve yüksekte çalışma okindo’da hiçbir zaman yapılmaz.
-      </Metin>
-      <Dugme pasif={!ad.trim() || !soyad.trim() || !mahalle || secili.length === 0} onPress={gonder}>
-        Başvurumu gönder
-      </Dugme>
+      <Kart vurgu="uyari">
+        <BilgiSatiri simge="warning-outline" renkli={renk.uyari}>
+          Gaz, kombi, elektrik panosu, dış cephe ve yüksekte çalışma okindo’da hiçbir zaman yapılmaz.
+        </BilgiSatiri>
+      </Kart>
     </Ekran>
   );
 }

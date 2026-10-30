@@ -1,7 +1,7 @@
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Text, View } from 'react-native';
-import { Ayirici, Bos, Ekran, Grup, GrupSatiri, Kart, Metin, renk, Satir, Simge, Tutar, yazi } from '@/components/ui';
+import { Ayirici, Bos, Dugme, Ekran, Grup, GrupSatiri, Kart, Metin, renk, Satir, Simge, stil, Tutar } from '@/components/ui';
 import { tl, zaman } from '@/lib/bicim';
 import { rpc, supabase } from '@/lib/supabase';
 import type { Hakedis } from '@/lib/tipler';
@@ -38,12 +38,12 @@ export default function Kazanc() {
 
   return (
     <Ekran yenile={yukle}>
-      <Kart vurgu="koyu" stilEk={{ padding: 20, gap: 6 }}>
-        <Text style={{ fontSize: 14, color: acikYazi }}>Bu ay eline geçen</Text>
+      <Kart vurgu="koyu" stilEk={{ padding: 24, gap: 8 }}>
+        <Text style={[stil.ikincil, { color: acikYazi }]}>Bu ay eline geçen</Text>
         <Tutar boyut={40} renkli="#FFFFFF">
           {tl(topla(ayinkiler, 'net') + topla(ayinkiler, 'bahsis') + topla(ayinkiler, 'masraf'))}
         </Tutar>
-        <Text style={{ fontSize: 14, color: renk.damga, fontWeight: '700', marginBottom: 8 }}>
+        <Text style={[stil.ikincil, { color: renk.damga, fontWeight: '600', marginBottom: 8 }]}>
           {isSayisi ? `${isSayisi} iş tamamladın` : 'Bu ay henüz iş tamamlamadın'}
         </Text>
         <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.15)', marginBottom: 4 }} />
@@ -53,9 +53,9 @@ export default function Kazanc() {
           ['Bahşiş', tl(topla(ayinkiler, 'bahsis'))],
           ['Malzeme geri ödemesi', tl(topla(ayinkiler, 'masraf'))],
         ].map(([sol, sag]) => (
-          <View key={sol} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 2 }}>
-            <Text style={{ fontSize: 15, color: acikYazi }}>{sol}</Text>
-            <Text style={{ fontSize: 15, color: '#FFFFFF', fontVariant: ['tabular-nums'] }}>{sag}</Text>
+          <View key={sol} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 }}>
+            <Text style={[stil.metin, { color: acikYazi }]}>{sol}</Text>
+            <Text style={[stil.metin, { color: '#FFFFFF', fontVariant: ['tabular-nums'] }]}>{sag}</Text>
           </View>
         ))}
       </Kart>
@@ -65,10 +65,10 @@ export default function Kazanc() {
           {puan.aylar.map((a) => (
             <View key={a.ay} style={{ padding: 16, gap: 8 }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Text style={{ fontFamily: yazi.kalin, fontSize: 16, color: renk.metin }}>{a.ay}</Text>
+                <Text style={[stil.metin, { fontWeight: '600' }]}>{a.ay}</Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                   <Simge ad="star" boyut={16} renkli={renk.damga} />
-                  <Text style={{ fontFamily: yazi.kalin, fontSize: 16, color: renk.metin }}>{String(a.ortalama).replace('.', ',')}</Text>
+                  <Text style={[stil.metin, { fontWeight: '600' }]}>{String(a.ortalama).replace('.', ',')}</Text>
                 </View>
               </View>
               {(a.yorumlar ?? []).map((y, i) => (
@@ -90,16 +90,21 @@ export default function Kazanc() {
       )}
 
       {hakedisler.length === 0 ? (
-        <Bos simge="wallet-outline" baslik="Henüz kazancın yok" metin="İlk işini tamamladığında burada görünür." />
+        <Bos
+          simge="wallet-outline"
+          baslik="Henüz kazancın yok"
+          metin="Tamamladığın her işin brüt, vergi ve net tutarı burada görünür."
+          eylem={<Dugme simge="notifications-outline" onPress={() => router.push('/')}>Açık talepleri gör</Dugme>}
+        />
       ) : (
         <Grup baslik="İş iş kazancın">
           {hakedisler.map((h) => (
             <View key={h.id} style={{ padding: 16, gap: 4 }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                <Text style={{ fontSize: 15, fontWeight: '700', color: renk.metin }}>{turAdi[h.tur]}</Text>
+                <Text style={[stil.metin, { fontWeight: '600' }]}>{turAdi[h.tur]}</Text>
                 <Tutar boyut={18}>{tl(Number(h.net) + Number(h.bahsis) + Number(h.masraf))}</Tutar>
               </View>
-              <Text style={{ fontSize: 13, color: renk.soluk, marginBottom: 4 }}>{zaman(h.olusturma_at)}</Text>
+              <Text style={[stil.ikincil, { color: renk.soluk, marginBottom: 4 }]}>{zaman(h.olusturma_at)}</Text>
               <Ayirici />
               <Satir sol="Brüt" sag={tl(h.brut_kh)} />
               <Satir sol="Vergi kesintisi" sag={`−${tl(h.stopaj)}`} />

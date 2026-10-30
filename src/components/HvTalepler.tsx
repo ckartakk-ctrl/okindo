@@ -15,6 +15,7 @@ import {
   Satir,
   Tutar,
   UstBlok,
+  stil,
   yazi,
 } from '@/components/ui';
 import { saatMetni, tl, zaman } from '@/lib/bicim';
@@ -57,8 +58,8 @@ export function HvTalepler() {
 
   const basitUst = (baslik: string) => (
     <UstBlok>
-      <Text style={{ fontSize: 16, color: '#BFE0D8' }}>Merhaba {profil.ad},</Text>
-      <Text style={{ fontFamily: yazi.baslik, fontSize: 30, lineHeight: 35, color: '#FFFFFF', letterSpacing: -0.8 }}>{baslik}</Text>
+      <Text style={[stil.metin, { color: '#CFE9E2' }]}>Merhaba {profil.ad},</Text>
+      <Text style={{ fontFamily: yazi.baslik, fontWeight: '600', fontSize: 30, lineHeight: 36, color: '#FFFFFF' }}>{baslik}</Text>
     </UstBlok>
   );
 
@@ -108,13 +109,13 @@ export function HvTalepler() {
 
   const ust = (
     <UstBlok>
-      <Text style={{ fontSize: 16, color: '#BFE0D8' }}>Merhaba {profil.ad},</Text>
+      <Text style={[stil.metin, { color: '#CFE9E2' }]}>Merhaba {profil.ad},</Text>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
         <View style={{ flex: 1, gap: 4 }}>
-          <Text style={{ fontFamily: yazi.baslik, fontSize: 30, lineHeight: 35, color: '#FFFFFF', letterSpacing: -0.8 }}>
+          <Text style={{ fontFamily: yazi.baslik, fontWeight: '600', fontSize: 30, lineHeight: 36, color: '#FFFFFF' }}>
             {profil.musait ? 'Müsaitsin' : 'Şu an kapalısın'}
           </Text>
-          <Text style={{ fontSize: 14, lineHeight: 19, color: '#BFE0D8' }}>
+          <Text style={[stil.ikincil, { color: '#CFE9E2' }]}>
             {profil.musait ? 'Yakınındaki yeni işler sana bildirilir.' : 'Açınca yakınındaki işleri görürsün.'}
           </Text>
         </View>
@@ -139,11 +140,28 @@ export function HvTalepler() {
         <Bos
           simge={profil.musait ? 'radio-outline' : 'moon-outline'}
           baslik={profil.musait ? 'Şu an açık talep yok' : 'Talepleri görmek için müsait ol'}
-          metin={profil.musait ? 'Yakınında yeni bir iş açıldığında haber vereceğiz.' : undefined}
+          metin={profil.musait ? 'Yakınında yeni bir iş açıldığında bildirim gönderir, burada gösteririz.' : 'Müsait olunca yakınındaki işler burada listelenir ve sana bildirilir.'}
+          eylem={
+            profil.musait ? (
+              <Dugme tur="ikincil" simge="refresh" onPress={yukle}>
+                Listeyi yenile
+              </Dugme>
+            ) : (
+              <Dugme
+                simge="radio"
+                onPress={async () => {
+                  await rpc('musaitlik_ayarla', { p_musait: true });
+                  await profilYenile();
+                }}
+              >
+                Müsait ol
+              </Dugme>
+            )
+          }
         />
       ) : (
         <>
-          <Text style={{ fontSize: 13, fontWeight: '600', color: renk.soluk, marginLeft: 4 }}>
+          <Text accessibilityRole="header" style={[stil.grupBaslik, { marginLeft: bosluk.xs }]}>
             {talepler.length} açık talep
           </Text>
           {talepler.map((t) => (
@@ -159,21 +177,21 @@ function TalepKarti({ talep, yenile }: { talep: AcikTalep; yenile: () => Promise
   return (
     <Kart stilEk={talep.sana_ozel ? { borderColor: renk.ana, borderWidth: 2 } : undefined}>
       {talep.sana_ozel || talep.acil ? (
-        <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
+        <View style={{ flexDirection: 'row', gap: bosluk.s, flexWrap: 'wrap' }}>
           {talep.sana_ozel ? <Rozet>Sana özel</Rozet> : null}
           {talep.acil ? <Rozet tur="uyari">Acil</Rozet> : null}
         </View>
       ) : null}
       <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
-        <Text style={{ flex: 1, fontFamily: yazi.kalin, fontSize: 18, lineHeight: 23, color: renk.metin }}>{talep.hizmet}</Text>
+        <Text style={[stil.altBaslik, { flex: 1, fontSize: 18 }]}>{talep.hizmet}</Text>
         <View style={{ alignItems: 'flex-end' }}>
           <Tutar boyut={24} renkli={renk.anaKoyu}>
             {tl(talep.net)}
           </Tutar>
-          <Text style={{ fontSize: 12, color: renk.soluk }}>eline geçecek</Text>
+          <Text style={[stil.meta, { color: renk.soluk }]}>eline geçecek</Text>
         </View>
       </View>
-      <View style={{ gap: 6, marginTop: 2 }}>
+      <View style={{ gap: bosluk.xs, marginTop: bosluk.xs }}>
         <BilgiSatiri simge="time-outline">
           {zaman(talep.planlanan_baslangic)}
           {talep.saat ? ` · ${saatMetni(talep.saat)}` : ''}
@@ -184,7 +202,7 @@ function TalepKarti({ talep, yenile }: { talep: AcikTalep; yenile: () => Promise
         </BilgiSatiri>
       </View>
       {Object.keys(talep.cevaplar ?? {}).length || talep.aciklama ? (
-        <View style={{ backgroundColor: renk.zemin, borderRadius: 12, padding: 12, gap: 4 }}>
+        <View style={{ backgroundColor: renk.zemin, borderRadius: 12, padding: bosluk.m, gap: bosluk.xs }}>
           {Object.entries(talep.cevaplar ?? {}).map(([k, v]) => {
             const soru = talep.hizmet_sorulari?.find((s) => s.id === k);
             return <Metin key={k} kucuk>{`${soru?.soru ?? k} ${v}`}</Metin>;
@@ -204,7 +222,7 @@ function TalepKarti({ talep, yenile }: { talep: AcikTalep; yenile: () => Promise
             router.push({ pathname: '/is/[id]', params: { id: talep.is_id } });
           }}
         >
-          Kabul et
+          İşi kabul et
         </Dugme>
       </View>
     </Kart>

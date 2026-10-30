@@ -14,11 +14,11 @@ export default function SekmeDuzeni() {
       screenOptions={{
         headerStyle: { backgroundColor: renk.zemin },
         headerShadowVisible: false,
-        headerTitleStyle: { fontFamily: yazi.baslik, fontSize: 24, color: renk.metin },
+        headerTitleStyle: { fontFamily: yazi.baslik, fontWeight: '600', fontSize: 24, color: renk.metin },
         headerTitleAlign: 'left',
         tabBarActiveTintColor: renk.anaKoyu,
         tabBarInactiveTintColor: renk.silik,
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '700' },
+        tabBarLabelStyle: { fontSize: 12, fontWeight: '600' },
         tabBarStyle: { backgroundColor: renk.kart, borderTopColor: renk.cizgi },
         sceneStyle: { backgroundColor: renk.zemin },
       }}

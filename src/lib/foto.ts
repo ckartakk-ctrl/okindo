@@ -72,11 +72,37 @@ export async function fotoCekVeYukle(isId: string, onEk: string, kaynak?: 'kamer
   const { error } = await supabase.storage
     .from('is-fotograflari')
     .upload(yol, base64Coz(dosya.base64), { contentType: 'image/jpeg', upsert: false });
-  if (error) throw new Error(`Fotoğraf yüklenemedi (${error.message}). İnternet bağlantını kontrol edip tekrar dene.`);
+  if (error) throw new Error('Fotoğraf yüklenemedi. Bağlantını kontrol edip tekrar dene.');
   return yol;
 }
 
 export async function fotoAdresi(yol: string): Promise<string | null> {
   const { data } = await supabase.storage.from('is-fotograflari').createSignedUrl(yol, 60 * 30);
   return data?.signedUrl ?? null;
+}
+
+/** Profil fotoğrafının herkese açık adresi (yol yoksa null) */
+export function profilFotoAdresi(yol: string | null | undefined): string | null {
+  if (!yol) return null;
+  return supabase.storage.from('profil-fotograflari').getPublicUrl(yol).data.publicUrl;
+}
+
+/** Profil fotoğrafı seçtirir, kare kırpar, yükler ve profile kaydeder. Yeni yolu döndürür. */
+export async function profilFotoYukle(kullaniciId: string): Promise<string | null> {
+  const secim = await kaynakSor();
+  if (!secim) return null;
+  const izin =
+    secim === 'kamera' ? await ImagePicker.requestCameraPermissionsAsync() : await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (!izin.granted) throw new Error('Fotoğraf eklemek için telefon ayarlarından okindo’ya izin ver.');
+  const ayar: ImagePicker.ImagePickerOptions = { quality: 0.5, base64: true, mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1] };
+  const sonuc = secim === 'kamera' ? await ImagePicker.launchCameraAsync(ayar) : await ImagePicker.launchImageLibraryAsync(ayar);
+  if (sonuc.canceled || !sonuc.assets?.[0]?.base64) return null;
+  const yol = `${kullaniciId}/profil-${Date.now()}.jpg`;
+  const { error } = await supabase.storage
+    .from('profil-fotograflari')
+    .upload(yol, base64Coz(sonuc.assets[0].base64), { contentType: 'image/jpeg', upsert: true });
+  if (error) throw new Error('Fotoğraf yüklenemedi. Bağlantını kontrol edip tekrar dene.');
+  const { error: e2 } = await supabase.from('profiller').update({ foto_yolu: yol }).eq('id', kullaniciId);
+  if (e2) throw new Error('Fotoğraf kaydedilemedi. Tekrar dene.');
+  return yol;
 }

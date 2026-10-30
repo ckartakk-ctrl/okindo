@@ -8,6 +8,17 @@ const [adres, klasor] = process.argv.slice(2);
 mkdirSync(klasor, { recursive: true });
 const rapor = [];
 const BITEN_IS = '01f02e81-be89-45ae-a103-787fe0ce6144';
+const HV = '71a640a7-db51-41d8-b713-9d6e9f38b292';
+const TEMIZLIK = 'c83a6f3d-d723-4b62-bc2b-54fc382c0035';
+
+async function sekme(sayfa, ad, metin) {
+  const s = sayfa.getByRole('tab', { name: metin });
+  if (await s.count()) {
+    await s.first().click();
+    await cek(sayfa, ad, null, 1500);
+    await uzunCek(sayfa, ad);
+  }
+}
 
 const tarayici = await chromium.launch();
 
@@ -98,6 +109,15 @@ if (await hizmetLinki.count()) {
 await cek(m, '04-musteri-islerim', '/islerim');
 await cek(m, '05-musteri-is-detay', `/is/${BITEN_IS}`);
 await uzunCek(m, '05-musteri-is-detay');
+await sekme(m, '05b-is-mesajlar', 'Mesajlar');
+await sekme(m, '05c-is-fotograflar', 'Fotoğraflar');
+await sekme(m, '05d-is-ayrintilar', 'Ayrıntılar');
+await cek(m, '05e-hv-profili', `/hv/${HV}`);
+await uzunCek(m, '05e-hv-profili');
+await cek(m, '05f-talep', `/talep?hizmetId=${TEMIZLIK}&saat=2&acil=0&cevaplar=%7B%7D&aciklama=`);
+await uzunCek(m, '05f-talep');
+await cek(m, '05g-hv-basvuru', '/hv-basvuru');
+await uzunCek(m, '05g-hv-basvuru');
 await cek(m, '06-musteri-hesap', '/hesap');
 await uzunCek(m, '06-musteri-hesap');
 await cek(m, '07-bildirimler', '/bildirimler');
@@ -116,6 +136,14 @@ await uzunCek(h, '13-hv-kazanc');
 await cek(h, '14-hv-hesap', '/hesap');
 await cek(h, '15-egitim', '/egitim');
 await uzunCek(h, '15-egitim');
+for (let i = 0; i < 5; i++) {
+  const ileri = h.getByText(/Sonraki bölüme geç|Teste geç/);
+  if (!(await ileri.count())) break;
+  await ileri.first().click();
+  await h.waitForTimeout(500);
+}
+await cek(h, '16-egitim-test', null, 1500);
+await uzunCek(h, '16-egitim-test');
 
 writeFileSync(`${klasor}/rapor.txt`, rapor.join('\n') + '\n');
 console.log(rapor.join('\n'));
