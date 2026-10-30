@@ -536,7 +536,7 @@ function HvBolumu({ veri, eylem }: { veri: Veri; eylem: (ad: string, p: Record<s
             </View>
             <View style={{ flex: 1 }}>
               <Dugme tur="ikincil" onPress={() => fotoCek('bitis')}>
-                {fotoVar('bitis') ? 'Bitiş ✓' : 'Bitiş fotoğrafı'}
+                {fotoVar('bitis') ? 'Bitiş ✓' : 'Bitiş (isteğe bağlı)'}
               </Dugme>
             </View>
           </View>
@@ -624,14 +624,14 @@ function HvBolumu({ veri, eylem }: { veri: Veri; eylem: (ad: string, p: Record<s
 
       {is.durum === 'basladi' ? (
         <Dugme
-          pasif={!fotoVar('bitis')}
+          simge="checkmark-done"
           onPress={async () => {
             if (await onayla('İş bitti mi?', 'Müşteriye işi gösterdin mi? Onaylayınca müşteriye bildirim gider.', 'Bitti')) {
               await eylem('isi_bitir', { p_is: is.id });
             }
           }}
         >
-          {fotoVar('bitis') ? 'Bitti' : 'Bitirmek için bitiş fotoğrafını çek'}
+          İş bitti
         </Dugme>
       ) : null}
 

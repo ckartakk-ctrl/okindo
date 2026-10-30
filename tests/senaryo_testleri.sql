@@ -136,10 +136,14 @@ select t('ek iş müşteri tutarı: taban tekrar alınmaz → 120', '120.00', (s
 select set_config('request.jwt.claim.sub', :'M1', false); set role authenticated;
 select ek_is_karar(:'ek1', true);
 reset role;
+update ayarlar set deger = '1' where anahtar = 'bitis_foto_zorunlu';
 select set_config('request.jwt.claim.sub', :'H1', false); set role authenticated;
 select t_hata('bitiş fotoğrafı olmadan bitmez', format('select isi_bitir(%L)', :'is1'), 'bitiş fotoğrafı');
 select foto_kaydet(:'is1', 'bitis', :'is1' || '/bitis.jpg');
 select isi_bitir(:'is1');
+reset role;
+update ayarlar set deger = '0' where anahtar = 'bitis_foto_zorunlu';
+select set_config('request.jwt.claim.sub', :'H1', false); set role authenticated;
 select t('bitti deyince HV yeni iş alabilir (açık iş yok)', '0', (select count(*)::text from isler where hv_id = :'H1' and durum = 'basladi'));
 reset role;
 select set_config('request.jwt.claim.sub', :'M1', false); set role authenticated;
