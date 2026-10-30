@@ -95,6 +95,46 @@ jobs:
           name: okindo-apk
           path: okindo.apk
 
+  # Web önizlemesini derler, test hesaplarıyla girip her ekranın görüntüsünü alır,
+  # görüntüleri "ekranlar" dalına yazar (tasarım denetimi için). APK'yı etkilemez.
+  ekranlar:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      EXPO_PUBLIC_SUPABASE_URL: https://taqrdphgahadaiageaon.supabase.co
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRhcXJkcGhnYWhhZGFpYWdlYW9uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMzNTUzNTgsImV4cCI6MjEwODkzMTM1OH0.pCeOZ4DokVK5LQ4GLrZLMHLKvGSTJiMKvlXzedINKtw
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Web önizlemesini derle
+        run: |
+          printf 'EXPO_PUBLIC_SUPABASE_URL=%s\nEXPO_PUBLIC_SUPABASE_ANON_KEY=%s\n' "$EXPO_PUBLIC_SUPABASE_URL" "$EXPO_PUBLIC_SUPABASE_ANON_KEY" > .env
+          npm install --no-audit --no-fund
+          npx expo install react-native-web react-dom @expo/metro-runtime
+          npx expo export --platform web --output-dir web-dist 2>&1 | tail -20
+      - name: Ekran görüntülerini al
+        run: |
+          npm install --no-save --no-audit --no-fund playwright@1.49.1
+          npx playwright install --with-deps chromium
+          node tests/statik_sunucu.mjs web-dist 8099 &
+          sleep 2
+          node tests/ekran_goruntuleri.mjs http://localhost:8099 ekran-cikti
+      - name: Görüntüleri "ekranlar" dalına yaz
+        if: always()
+        run: |
+          [ -d ekran-cikti ] || exit 0
+          cd ekran-cikti
+          git init -q -b ekranlar
+          git config user.name "okindo-ci"
+          git config user.email "ci@okindo.local"
+          echo "Derleme: ${{ github.sha }}" > KAYNAK.txt
+          git add -A
+          git commit -q -m "Ekran görüntüleri ${{ github.sha }}"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" ekranlar:ekranlar
+          echo "::notice title=Ekranlar::$(tr '\n' ' ' < rapor.txt | cut -c1-900)"
+
   # Sanal bir Android telefonda APK'yı kurup açar; çökerse sebebi Annotations'a yazılır.
   acilis-testi:
     needs: build
