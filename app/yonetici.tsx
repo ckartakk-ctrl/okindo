@@ -1,6 +1,7 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, Switch, Text, View } from 'react-native';
+import { IkiAdimKapisi } from '@/components/IkiAdimKapisi';
 import { Bos, bosluk, Dugme, Ekran, Girdi, Grup, GrupSatiri, Kart, Metin, renk, Rozet, Satir, Secenekler, Simge, stil, Tutar } from '@/components/ui';
 import { tl, zaman } from '@/lib/bicim';
 import { useOturum } from '@/lib/oturum';
@@ -82,53 +83,55 @@ export default function Yonetici() {
   ];
 
   return (
-    <Ekran yenile={yukle}>
-      <Text accessibilityRole="header" style={stil.baslik}>
-        Yönetim
-      </Text>
-      <View style={{ flexDirection: 'row', gap: bosluk.s }}>
-        {kutular.map((k) => (
-          <View key={k.ad} style={[stil.kart, { flex: 1, gap: bosluk.xs, padding: bosluk.m }]}>
-            <Simge ad={k.simge} boyut={20} renkli={k.simge === 'alert-circle' && anlasmazliklar.length ? renk.uyari : renk.ana} />
-            <Tutar boyut={28}>{k.deger}</Tutar>
-            <Text style={[stil.ikincil, { fontWeight: '600' }]}>{k.ad}</Text>
-            <Text style={[stil.meta, { color: renk.soluk }]}>{k.alt}</Text>
-          </View>
+    <IkiAdimKapisi dogrulandi={yukle}>
+      <Ekran yenile={yukle}>
+        <Text accessibilityRole="header" style={stil.baslik}>
+          Yönetim
+        </Text>
+        <View style={{ flexDirection: 'row', gap: bosluk.s }}>
+          {kutular.map((k) => (
+            <View key={k.ad} style={[stil.kart, { flex: 1, gap: bosluk.xs, padding: bosluk.m }]}>
+              <Simge ad={k.simge} boyut={20} renkli={k.simge === 'alert-circle' && anlasmazliklar.length ? renk.uyari : renk.ana} />
+              <Tutar boyut={28}>{k.deger}</Tutar>
+              <Text style={[stil.ikincil, { fontWeight: '600' }]}>{k.ad}</Text>
+              <Text style={[stil.meta, { color: renk.soluk }]}>{k.alt}</Text>
+            </View>
+          ))}
+        </View>
+
+        {basvurular.length ? (
+          <Text accessibilityRole="header" style={[stil.grupBaslik, { marginLeft: bosluk.xs }]}>{`HV başvuruları (${basvurular.length})`}</Text>
+        ) : null}
+        {basvurular.length ? null : (<Grup baslik={`HV başvuruları (0)`}>
+          {basvurular.length === 0 ? (
+            <GrupSatiri simge="checkmark-done-outline" baslik="Bekleyen başvuru yok" alt="Yeni başvuru gelince burada ve bildirimlerinde görünür." />
+          ) : null}
+        </Grup>)}
+        {basvurular.map((b) => (
+          <BasvuruKarti key={b.id} basvuru={b} kurucuOlabilir={aktifHv < 50} yenile={yukle} />
         ))}
-      </View>
 
-      {basvurular.length ? (
-        <Text accessibilityRole="header" style={[stil.grupBaslik, { marginLeft: bosluk.xs }]}>{`HV başvuruları (${basvurular.length})`}</Text>
-      ) : null}
-      {basvurular.length ? null : (<Grup baslik={`HV başvuruları (0)`}>
-        {basvurular.length === 0 ? (
-          <GrupSatiri simge="checkmark-done-outline" baslik="Bekleyen başvuru yok" alt="Yeni başvuru gelince burada ve bildirimlerinde görünür." />
+        {anlasmazliklar.length ? (
+          <Text accessibilityRole="header" style={[stil.grupBaslik, { marginLeft: bosluk.xs }]}>{`Anlaşmazlıklar (${anlasmazliklar.length})`}</Text>
         ) : null}
-      </Grup>)}
-      {basvurular.map((b) => (
-        <BasvuruKarti key={b.id} basvuru={b} kurucuOlabilir={aktifHv < 50} yenile={yukle} />
-      ))}
+        {anlasmazliklar.length ? null : (<Grup baslik={`Anlaşmazlıklar (0)`}>
+          {anlasmazliklar.length === 0 ? (
+            <GrupSatiri simge="happy-outline" baslik="Açık anlaşmazlık yok" alt="Müşteri sorun bildirirse ya da HV itiraz ederse burada görünür." />
+          ) : null}
+        </Grup>)}
+        {anlasmazliklar.map((a) => (
+          <AnlasmazlikKarti key={a.id} kayit={a} yenile={yukle} />
+        ))}
 
-      {anlasmazliklar.length ? (
-        <Text accessibilityRole="header" style={[stil.grupBaslik, { marginLeft: bosluk.xs }]}>{`Anlaşmazlıklar (${anlasmazliklar.length})`}</Text>
-      ) : null}
-      {anlasmazliklar.length ? null : (<Grup baslik={`Anlaşmazlıklar (0)`}>
-        {anlasmazliklar.length === 0 ? (
-          <GrupSatiri simge="happy-outline" baslik="Açık anlaşmazlık yok" alt="Müşteri sorun bildirirse ya da HV itiraz ederse burada görünür." />
-        ) : null}
-      </Grup>)}
-      {anlasmazliklar.map((a) => (
-        <AnlasmazlikKarti key={a.id} kayit={a} yenile={yukle} />
-      ))}
-
-      <Grup baslik="Ayarlar">
-        <GrupSatiri
-          simge="options-outline"
-          baslik="Fiyat, süre ve oranlar"
-          alt="Supabase panelinde “ayarlar” tablosundan değiştirilir. Hizmet açıp kapatmak için “hizmetler” tablosundaki “aktif” sütunu kullanılır."
-        />
-      </Grup>
-    </Ekran>
+        <Grup baslik="Ayarlar">
+          <GrupSatiri
+            simge="options-outline"
+            baslik="Fiyat, süre ve oranlar"
+            alt="Supabase panelinde “ayarlar” tablosundan değiştirilir. Hizmet açıp kapatmak için “hizmetler” tablosundaki “aktif” sütunu kullanılır."
+          />
+        </Grup>
+      </Ekran>
+    </IkiAdimKapisi>
   );
 }
 

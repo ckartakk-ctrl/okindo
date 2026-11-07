@@ -34,6 +34,7 @@ export default function AdresEkle() {
   }
 
   async function kaydet() {
+    if (!mahalle) throw new Error('Önce mahalleni seç.');
     const m = mahalleler.find((x) => x.id === mahalle)!;
     const { error } = await supabase.from('adresler').insert({
       kullanici_id: oturum!.user.id,

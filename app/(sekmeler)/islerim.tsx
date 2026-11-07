@@ -1,9 +1,9 @@
-import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { router } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 import { Bos, bosluk, Dugme, Ekran, Grup, renk, Rozet, Simge, stil, Yukleniyor, type SimgeAdi } from '@/components/ui';
 import { bitmisDurumlar, durumMetni, hvDurumMetni, tl, zaman } from '@/lib/bicim';
 import { useOturum } from '@/lib/oturum';
+import { useEkranSorgusu, veriYaDaHata } from '@/lib/sorgu';
 import { supabase } from '@/lib/supabase';
 import type { Is, IsDurumu } from '@/lib/tipler';
 
@@ -32,25 +32,18 @@ function rozetTuru(d: IsDurumu): 'ana' | 'uyari' | 'soluk' | 'damga' {
 
 export default function Islerim() {
   const { oturum, mod } = useOturum();
-  const [isler, setIsler] = useState<Is[] | null>(null);
   const ben = oturum!.user.id;
-
-  const yukle = useCallback(async () => {
+  const { data: isler, yenile: yukle } = useEkranSorgusu(['isler', mod, ben], async () => {
     const sutun = mod === 'hv' ? 'hv_id' : 'musteri_id';
-    const { data } = await supabase
-      .from('isler')
-      .select('*, hizmetler(ad, fiyat_tipi, hazirlik, sorular)')
-      .eq(sutun, ben)
-      .order('planlanan_baslangic', { ascending: false })
-      .limit(100);
-    setIsler((data as Is[]) ?? []);
-  }, [ben, mod]);
-
-  useFocusEffect(
-    useCallback(() => {
-      yukle();
-    }, [yukle]),
-  );
+    return (veriYaDaHata(
+      await supabase
+        .from('isler')
+        .select('*, hizmetler(ad, fiyat_tipi, hazirlik, sorular)')
+        .eq(sutun, ben)
+        .order('planlanan_baslangic', { ascending: false })
+        .limit(100),
+    ) ?? []) as Is[];
+  });
 
   if (!isler) return <Yukleniyor />;
 

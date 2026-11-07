@@ -1,7 +1,7 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Linking, Pressable, Text, View } from 'react-native';
-import { Avatar, BilgiSatiri, bosluk, Ekran, Grup, GrupSatiri, hataGoster, Kart, onayla, renk, Rozet, Simge, stil, Tutar, yazi } from '@/components/ui';
+import { Avatar, BilgiSatiri, bosluk, Ekran, Grup, GrupSatiri, hataGoster, Kart, onayla, renk, Rozet, Simge, stil, Tutar } from '@/components/ui';
 import { profilFotoAdresi, profilFotoYukle } from '@/lib/foto';
 import { tl } from '@/lib/bicim';
 import { useOturum, type Mod } from '@/lib/oturum';

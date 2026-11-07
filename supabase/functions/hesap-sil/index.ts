@@ -22,6 +22,18 @@ Deno.serve(async (istek) => {
 
   await db.from('adresler').delete().eq('kullanici_id', id);
   await db.from('hv_etiketleri').delete().eq('hv_id', id);
+  await db.from('push_jetonlari').delete().eq('kullanici_id', id);
+
+  // Profil fotoğrafları (KVKK): kişinin klasöründeki bütün dosyalar silinir.
+  // İş fotoğrafları ve fişler işin kaydıdır; yasal saklama süresi boyunca kalır, kişiye bağlı değildir.
+  const depo = db.storage.from('profil-fotograflari');
+  for (;;) {
+    const { data: dosyalar, error: listeHatasi } = await depo.list(id, { limit: 100 });
+    if (listeHatasi) return yanit({ hata: 'Hesap silinemedi, lütfen destekle iletişime geç' }, 500);
+    if (!dosyalar?.length) break;
+    const { error: silmeHatasi } = await depo.remove(dosyalar.map((d) => `${id}/${d.name}`));
+    if (silmeHatasi) return yanit({ hata: 'Hesap silinemedi, lütfen destekle iletişime geç' }, 500);
+  }
   await db
     .from('profiller')
     .update({
