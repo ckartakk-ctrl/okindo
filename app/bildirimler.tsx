@@ -1,8 +1,8 @@
-import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { router } from 'expo-router';
 import { Bos, Dugme, Ekran, Grup, GrupSatiri, type SimgeAdi } from '@/components/ui';
 import { zaman } from '@/lib/bicim';
 import { useOturum } from '@/lib/oturum';
+import { useEkranSorgusu, veriYaDaHata } from '@/lib/sorgu';
 import { supabase } from '@/lib/supabase';
 import type { Bildirim } from '@/lib/tipler';
 
@@ -22,23 +22,21 @@ function simgeSec(b: Bildirim): SimgeAdi {
 /** Gelen kutusu kalıbı: en yeni üstte, okunmamışlar kalın ve solda vurgu çizgisiyle */
 export default function Bildirimler() {
   const { oturum } = useOturum();
-  const [liste, setListe] = useState<Bildirim[] | null>(null);
-
-  const yukle = useCallback(async () => {
-    const { data } = await supabase.from('bildirimler').select('*').order('olusturma_at', { ascending: false }).limit(100);
-    setListe((data as Bildirim[]) ?? []);
-    await supabase.from('bildirimler').update({ okundu: true }).eq('kullanici_id', oturum!.user.id).eq('okundu', false);
-  }, [oturum]);
-
-  useFocusEffect(
-    useCallback(() => {
-      yukle();
-    }, [yukle]),
-  );
+  const ben = oturum!.user.id;
+  const { data: liste, yenile } = useEkranSorgusu(['bildirimler', ben], async () => {
+    const liste = veriYaDaHata(
+      await supabase.from('bildirimler').select('*').order('olusturma_at', { ascending: false }).limit(100),
+    ) as Bildirim[];
+    // Liste gösterilince okunmamışlar okundu sayılır (kalın görünüm bu açılışta kalır)
+    if (liste.some((b) => !b.okundu)) {
+      await supabase.from('bildirimler').update({ okundu: true }).eq('kullanici_id', ben).eq('okundu', false);
+    }
+    return liste;
+  });
 
   if (liste && !liste.length) {
     return (
-      <Ekran yenile={yukle}>
+      <Ekran yenile={yenile}>
         <Bos
           simge="notifications-outline"
           baslik="Henüz bildirimin yok"
@@ -49,7 +47,7 @@ export default function Bildirimler() {
     );
   }
   return (
-    <Ekran yenile={yukle}>
+    <Ekran yenile={yenile}>
       <Grup>
         {(liste ?? []).map((b) => (
           <GrupSatiri

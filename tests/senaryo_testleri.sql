@@ -38,6 +38,8 @@ insert into auth.users (id, phone) values
   (:'M1', '905300000001'), (:'M2', '905300000002'), (:'H1', '905300000003'),
   (:'H2', '905300000004'), (:'YN', '905300000005');
 update profiller set yonetici = true, ad = 'Cihad' where id = :'YN';
+-- Testlerdeki oturumlar iki adımlı doğrulamadan geçmiş sayılır (yönetici için K52); 16. bölüm ayrıca dener
+select set_config('request.jwt.claims', '{"aal":"aal2"}', false);
 update profiller set ad = 'Ayşe' where id = :'M1';
 update profiller set ad = 'Kemal' where id = :'M2';
 
@@ -336,6 +338,77 @@ select t('HV profilinde hizmetler listelenir', 'true', (select jsonb_array_lengt
 select t('10 puandan önce yorum gösterilmez', '0', (select jsonb_array_length(hv_profili(:'H1')->'yorumlar'))::text);
 select t_hata('olmayan HV profili', format('select hv_profili(%L)', :'M1'), 'görüntülenemiyor');
 reset role;
+
+\echo '--- 16. Yönetici iki adımlı doğrulama (K52)'
+select set_config('request.jwt.claims', '{"aal":"aal1"}', false);
+select set_config('request.jwt.claim.sub', :'YN', false); set role authenticated;
+select t('iki adım olmadan yönetici sayılmaz', 'false', yonetici_mi()::text);
+select t_hata('iki adım olmadan HV durumu değiştirilemez', format('select yonetici_hv_durum(%L, %L, %L)', :'H2', 'askida', 'deneme'), 'Yetkin yok');
+select t('iki adım olmadan başkasının profilini göremez', '0', (select count(*)::text from profiller where id = :'M1'));
+select set_config('request.jwt.claims', '{"aal":"aal2"}', false);
+select t('iki adımla yönetici', 'true', yonetici_mi()::text);
+select set_config('request.jwt.claim.sub', :'H1', false);
+select t('iki adım tek başına yönetici yapmaz', 'false', yonetici_mi()::text);
+reset role;
+update ayarlar set deger = '0' where anahtar = 'yonetici_iki_adim';
+select set_config('request.jwt.claims', '{"aal":"aal1"}', false);
+select set_config('request.jwt.claim.sub', :'YN', false); set role authenticated;
+select t('ayar kapalıyken iki adım gerekmez', 'true', yonetici_mi()::text);
+reset role;
+update ayarlar set deger = '1' where anahtar = 'yonetici_iki_adim';
+select set_config('request.jwt.claims', '{"aal":"aal2"}', false);
+
+\echo '--- 17. Ödeme işleyici kilidi'
+update ayarlar set deger = '"iyzico"' where anahtar = 'odeme_saglayici';
+update odemeler set durum = 'bloke_bekliyor', saglayici_ref = null where is_id = :'is7';
+select id as od7 from odemeler where is_id = :'is7' limit 1 \gset
+set role authenticated;
+select t_hata('kullanıcı ödeme kuyruğunu alamaz', 'select * from odeme_isleme_al(5)', 'permission');
+reset role;
+set role service_role;
+select t('ilk işleyici ödemeyi alır', '1', (select count(*)::text from odeme_isleme_al(50) where id = :'od7'));
+select t('kilitli ödeme ikinci kez alınmaz', '0', (select count(*)::text from odeme_isleme_al(50) where id = :'od7'));
+select t('durum değiştiyse sonuç yazılmaz', 'false', odeme_isleme_bitir(:'od7', 'kapama_bekliyor', 'kapandi', 'IYZ-ESKI')::text);
+select t('durum değişse de işlem numarası saklanır', 'bloke_bekliyor/IYZ-ESKI', (select durum || '/' || saglayici_ref from odemeler where id = :'od7'));
+select t('geçici hata kilidi bırakır', 'true', odeme_isleme_bitir(:'od7', 'bloke_bekliyor', null, null, 'zaman aşımı')::text);
+select t('kilit bırakılınca yeniden alınır', '1', (select count(*)::text from odeme_isleme_al(50) where id = :'od7'));
+select t('ikinci deneme sayıldı', '2', (select deneme_sayisi::text from odemeler where id = :'od7'));
+select odeme_isleme_bitir(:'od7', 'bloke_bekliyor', null, null, 'hata 2');
+select count(*) from odeme_isleme_al(50); select odeme_isleme_bitir(:'od7', 'bloke_bekliyor', null, null, 'hata 3');
+select count(*) from odeme_isleme_al(50); select odeme_isleme_bitir(:'od7', 'bloke_bekliyor', null, null, 'hata 4');
+select count(*) from odeme_isleme_al(50); select odeme_isleme_bitir(:'od7', 'bloke_bekliyor', null, null, 'hata 5');
+select t('5 denemeden sonra elle kontrole düşer', 'true', (select elle_kontrol::text from odemeler where id = :'od7'));
+select t('elle kontroldeki ödeme alınmaz', '0', (select count(*)::text from odeme_isleme_al(50) where id = :'od7'));
+reset role;
+select t('yöneticiye haber gitti', '1', (select count(*)::text from bildirimler where kullanici_id = :'YN' and baslik = 'Ödeme elle kontrol edilmeli'));
+select set_config('request.jwt.claim.sub', :'YN', false); set role authenticated;
+select yonetici_odeme_yeniden_dene(:'od7');
+reset role;
+set role service_role;
+select t('yönetici yeniden kuyruğa koydu', '1', (select count(*)::text from odeme_isleme_al(50) where id = :'od7'));
+select t('başarılı sonuç yazılır', 'true', odeme_isleme_bitir(:'od7', 'bloke_bekliyor', 'bloke', 'IYZ-1')::text);
+select t('yeni adımda sayaç sıfırlanır', 'bloke/0/IYZ-1', (select durum || '/' || deneme_sayisi || '/' || saglayici_ref from odemeler where id = :'od7'));
+reset role;
+update ayarlar set deger = '"test"' where anahtar = 'odeme_saglayici';
+
+\echo '--- 18. Push jetonları'
+select set_config('request.jwt.claim.sub', :'M1', false); set role authenticated;
+select push_jetonu_kaydet('ExponentPushToken[ortak-telefon]', 'android');
+select t('kendi jetonunu görür', '1', (select count(*)::text from push_jetonlari));
+reset role;
+select set_config('request.jwt.claim.sub', :'M2', false); set role authenticated;
+select t('başkasının jetonunu göremez', '0', (select count(*)::text from push_jetonlari));
+select push_jetonu_kaydet('ExponentPushToken[ortak-telefon]', 'android');
+reset role;
+select t('aynı telefonda yeni hesaba geçer', :'M2', (select kullanici_id::text from push_jetonlari where jeton = 'ExponentPushToken[ortak-telefon]'));
+select set_config('request.jwt.claim.sub', :'M1', false); set role authenticated;
+select push_jetonu_sil('ExponentPushToken[ortak-telefon]');
+reset role;
+select t('başkasının jetonunu silemez', '1', (select count(*)::text from push_jetonlari));
+select set_config('request.jwt.claim.sub', :'M2', false); set role authenticated;
+select push_jetonu_sil('ExponentPushToken[ortak-telefon]');
+reset role;
+select t('çıkışta jeton silinir', '0', (select count(*)::text from push_jetonlari));
 
 \echo ''
 \echo 'TÜM TESTLER BAŞARILI'

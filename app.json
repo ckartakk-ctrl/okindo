@@ -42,6 +42,13 @@
           "cameraPermission": "İşin başlangıç ve bitiş fotoğrafını çekmek için kamerayı kullanıyoruz.",
           "photosPermission": "Fiş ve iş fotoğraflarını eklemek için galerini kullanıyoruz."
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#13806F",
+          "defaultChannel": "varsayilan"
+        }
       ]
     ],
     "experiments": {

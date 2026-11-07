@@ -1,0 +1,23 @@
+# Supabase CLI ayarları (npx supabase ...). Ayrıntı: README > "Veritabanını Supabase CLI ile kur".
+project_id = "okindo"
+
+[db]
+major_version = 15
+
+[db.seed]
+enabled = false
+
+# Bu fonksiyonlar kullanıcı oturumuyla değil, kendi sırlarıyla korunur
+# (zamanlayıcı sırrı ya da Supabase'in SMS kancası imzası). Bu yüzden Supabase'in JWT kontrolü kapalıdır.
+[functions.odeme-isleyici]
+verify_jwt = false
+
+[functions.push-gonder]
+verify_jwt = false
+
+[functions.sms-gonder]
+verify_jwt = false
+
+# Hesap silme kullanıcının kendi oturumuyla çağrılır
+[functions.hesap-sil]
+verify_jwt = true

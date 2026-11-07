@@ -5,3 +5,6 @@ dist/
 *.log
 ios/
 android/
+web-dist/
+coverage/
+supabase/.temp/

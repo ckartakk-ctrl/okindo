@@ -3,7 +3,10 @@ import { renk, Simge, yazi, type SimgeAdi } from '@/components/ui';
 import { useOturum } from '@/lib/oturum';
 
 function sekmeSimgesi(dolu: SimgeAdi, bos: SimgeAdi) {
-  return ({ focused, color }: { focused: boolean; color: string }) => <Simge ad={focused ? dolu : bos} boyut={23} renkli={color} />;
+  function SekmeSimgesi({ focused, color }: { focused: boolean; color: string }) {
+    return <Simge ad={focused ? dolu : bos} boyut={23} renkli={color} />;
+  }
+  return SekmeSimgesi;
 }
 
 export default function SekmeDuzeni() {

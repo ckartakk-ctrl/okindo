@@ -1,28 +1,38 @@
 {
   "cli": {
-    "version": ">= 12.0.0",
+    "version": ">= 16.0.0",
     "appVersionSource": "remote"
   },
   "build": {
+    "base": {
+      "node": "22.14.0",
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://taqrdphgahadaiageaon.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRhcXJkcGhnYWhhZGFpYWdlYW9uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMzNTUzNTgsImV4cCI6MjEwODkzMTM1OH0.pCeOZ4DokVK5LQ4GLrZLMHLKvGSTJiMKvlXzedINKtw"
+      }
+    },
     "preview": {
+      "extends": "base",
       "distribution": "internal",
+      "channel": "preview",
       "android": {
         "buildType": "apk"
-      },
-      "env": {
-        "EXPO_PUBLIC_SUPABASE_URL": "https://PROJE-KODUN.supabase.co",
-        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "buraya-anon-public-anahtar"
       }
     },
     "production": {
+      "extends": "base",
+      "channel": "production",
       "autoIncrement": true,
-      "env": {
-        "EXPO_PUBLIC_SUPABASE_URL": "https://PROJE-KODUN.supabase.co",
-        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "buraya-anon-public-anahtar"
+      "android": {
+        "buildType": "app-bundle"
       }
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "android": {
+        "track": "internal"
+      }
+    }
   }
 }

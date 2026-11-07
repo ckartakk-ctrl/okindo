@@ -1,6 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Session } from '@supabase/supabase-js';
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import { pushKaydet, pushSil } from './bildirim';
+import { hataTakibiKullanici } from './hataTakibi';
 import { supabase } from './supabase';
 import type { Profil } from './tipler';
 
@@ -25,6 +27,7 @@ export function OturumSaglayici({ children }: { children: ReactNode }) {
   const [mod, setMod] = useState<Mod>('musteri');
 
   const profilYukle = useCallback(async (s: Session | null) => {
+    hataTakibiKullanici(s?.user.id ?? null);
     if (!s) {
       setProfil(null);
       return;
@@ -51,9 +54,10 @@ export function OturumSaglayici({ children }: { children: ReactNode }) {
         setHazir(true);
       }
     })();
-    const { data: dinleyici } = supabase.auth.onAuthStateChange((_olay, s) => {
+    const { data: dinleyici } = supabase.auth.onAuthStateChange((olay, s) => {
       setOturum(s);
       profilYukle(s);
+      if (s && (olay === 'SIGNED_IN' || olay === 'INITIAL_SESSION')) pushKaydet();
     });
     return () => dinleyici.subscription.unsubscribe();
   }, [profilYukle]);
@@ -71,6 +75,7 @@ export function OturumSaglayici({ children }: { children: ReactNode }) {
     modDegistir,
     profilYenile: () => profilYukle(oturum),
     cikis: async () => {
+      await pushSil();
       await supabase.auth.signOut();
     },
   };

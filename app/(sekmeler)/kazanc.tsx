@@ -1,8 +1,8 @@
-import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { router } from 'expo-router';
 import { Text, View } from 'react-native';
 import { Ayirici, Bos, Dugme, Ekran, Grup, GrupSatiri, Kart, Metin, renk, Satir, Simge, stil, Tutar } from '@/components/ui';
 import { tl, zaman } from '@/lib/bicim';
+import { useEkranSorgusu, veriYaDaHata } from '@/lib/sorgu';
 import { rpc, supabase } from '@/lib/supabase';
 import type { Hakedis } from '@/lib/tipler';
 
@@ -11,20 +11,16 @@ type PuanOzeti = { gorunur: boolean; toplam: number; aylar: { ay: string; ortala
 const turAdi: Record<Hakedis['tur'], string> = { is: 'İş', cikis: 'Çıkış ücreti', gec_iptal: 'Geç iptal ücreti' };
 
 export default function Kazanc() {
-  const [hakedisler, setHakedisler] = useState<Hakedis[]>([]);
-  const [puan, setPuan] = useState<PuanOzeti | null>(null);
-
-  const yukle = useCallback(async () => {
-    const { data } = await supabase.from('hakedisler').select('*').order('olusturma_at', { ascending: false }).limit(200);
-    setHakedisler((data as Hakedis[]) ?? []);
-    setPuan(await rpc<PuanOzeti>('hv_puan_ozeti').catch(() => null));
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      yukle();
-    }, [yukle]),
+  const { data: hakedisler = [], yenile: hakedisYenile } = useEkranSorgusu(['hakedisler'], async () =>
+    (veriYaDaHata(await supabase.from('hakedisler').select('*').order('olusturma_at', { ascending: false }).limit(200)) ??
+      []) as Hakedis[],
   );
+  const { data: puan = null, yenile: puanYenile } = useEkranSorgusu(['hv_puan_ozeti'], () =>
+    rpc<PuanOzeti>('hv_puan_ozeti').catch(() => null),
+  );
+  const yukle = async () => {
+    await Promise.all([hakedisYenile(), puanYenile()]);
+  };
 
   const buAy = new Date();
   const ayinkiler = hakedisler.filter((h) => {

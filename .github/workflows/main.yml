@@ -1,10 +1,15 @@
 name: Android APK
 
-# Koda her değişiklik yüklendiğinde (ya da Actions sekmesinden "Run workflow" ile) APK derlenir.
+# APK yalnız sürüm etiketi konunca (ör. v0.6.0) ya da Actions sekmesinden "Run workflow" ile derlenir.
+# Her değişiklikteki hızlı kontroller "Kontrol" iş akışındadır (kontrol.yml).
 # Bitince APK, deponun "Releases" bölümüne telefondan indirilebilir şekilde konur.
+#
+# Supabase adresi ve anahtarı: GitHub > Settings > Secrets and variables > Actions > Variables
+# bölümüne SUPABASE_URL ve SUPABASE_ANON_KEY eklenirse onlar kullanılır; eklenmemişse aşağıdaki pilot değerleri.
+# İsteğe bağlı SENTRY_DSN değişkeni eklenirse uygulamanın hataları Sentry'ye gider.
 on:
   push:
-    branches: [main]
+    tags: ['v*']
   workflow_dispatch:
 
 permissions:
@@ -18,8 +23,9 @@ jobs:
     # uygulamanın içine zaten gömülür, veriler veritabanındaki erişim kurallarıyla korunur.
     # Gizli "service_role" anahtarı ASLA buraya yazılmaz.
     env:
-      EXPO_PUBLIC_SUPABASE_URL: https://taqrdphgahadaiageaon.supabase.co
-      EXPO_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRhcXJkcGhnYWhhZGFpYWdlYW9uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMzNTUzNTgsImV4cCI6MjEwODkzMTM1OH0.pCeOZ4DokVK5LQ4GLrZLMHLKvGSTJiMKvlXzedINKtw
+      EXPO_PUBLIC_SUPABASE_URL: ${{ vars.SUPABASE_URL || 'https://taqrdphgahadaiageaon.supabase.co' }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRhcXJkcGhnYWhhZGFpYWdlYW9uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMzNTUzNTgsImV4cCI6MjEwODkzMTM1OH0.pCeOZ4DokVK5LQ4GLrZLMHLKvGSTJiMKvlXzedINKtw' }}
+      EXPO_PUBLIC_SENTRY_DSN: ${{ vars.SENTRY_DSN || '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -38,19 +44,16 @@ jobs:
             echo "::error::Supabase adresi ya da anahtarı eksik"
             exit 1
           fi
-          printf 'EXPO_PUBLIC_SUPABASE_URL=%s\nEXPO_PUBLIC_SUPABASE_ANON_KEY=%s\n' \
-            "$EXPO_PUBLIC_SUPABASE_URL" "$EXPO_PUBLIC_SUPABASE_ANON_KEY" > .env
+          printf 'EXPO_PUBLIC_SUPABASE_URL=%s\nEXPO_PUBLIC_SUPABASE_ANON_KEY=%s\nEXPO_PUBLIC_SENTRY_DSN=%s\n' \
+            "$EXPO_PUBLIC_SUPABASE_URL" "$EXPO_PUBLIC_SUPABASE_ANON_KEY" "$EXPO_PUBLIC_SENTRY_DSN" > .env
 
-      - name: Paketleri kur
-        run: |
-          npm install --no-audit --no-fund
-          npx expo install --fix
+      - name: Paketleri kur (package-lock.json'daki sürümlerle)
+        run: npm ci --no-audit --no-fund
 
-      - name: Kod kontrolü (yalnız uyarı)
-        continue-on-error: true
+      - name: Kod kontrolü
         run: |
           if ! npx tsc --noEmit > tsc.log 2>&1; then
-            echo "::warning title=Tip kontrolü::$(head -40 tsc.log | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g')"
+            echo "::error title=Tip kontrolü::$(head -40 tsc.log | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g')"
             exit 1
           fi
 
@@ -101,8 +104,9 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
-      EXPO_PUBLIC_SUPABASE_URL: https://taqrdphgahadaiageaon.supabase.co
-      EXPO_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRhcXJkcGhnYWhhZGFpYWdlYW9uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMzNTUzNTgsImV4cCI6MjEwODkzMTM1OH0.pCeOZ4DokVK5LQ4GLrZLMHLKvGSTJiMKvlXzedINKtw
+      EXPO_PUBLIC_SUPABASE_URL: ${{ vars.SUPABASE_URL || 'https://taqrdphgahadaiageaon.supabase.co' }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRhcXJkcGhnYWhhZGFpYWdlYW9uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMzNTUzNTgsImV4cCI6MjEwODkzMTM1OH0.pCeOZ4DokVK5LQ4GLrZLMHLKvGSTJiMKvlXzedINKtw' }}
+      EXPO_PUBLIC_SENTRY_DSN: ${{ vars.SENTRY_DSN || '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -111,7 +115,7 @@ jobs:
       - name: Web önizlemesini derle
         run: |
           printf 'EXPO_PUBLIC_SUPABASE_URL=%s\nEXPO_PUBLIC_SUPABASE_ANON_KEY=%s\n' "$EXPO_PUBLIC_SUPABASE_URL" "$EXPO_PUBLIC_SUPABASE_ANON_KEY" > .env
-          npm install --no-audit --no-fund
+          npm ci --no-audit --no-fund
           npx expo install react-native-web react-dom @expo/metro-runtime
           echo "::notice title=Yazı tipi paketi::$(ls node_modules/@expo-google-fonts/bricolage-grotesque | tr '\n' ' ' | cut -c1-900) | index: $(grep -o 'BricolageGrotesque_[A-Za-z0-9_]*600[A-Za-z]*' node_modules/@expo-google-fonts/bricolage-grotesque/index.js | sort -u | tr '\n' ' ')" || true
           set -o pipefail
@@ -208,8 +212,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "apk-${{ github.run_number }}" okindo.apk \
+          if [ "${{ github.ref_type }}" = "tag" ]; then ad="${{ github.ref_name }}"; else ad="apk-${{ github.run_number }}"; fi
+          gh release create "$ad" okindo.apk \
             --repo "${{ github.repository }}" \
-            --title "okindo APK #${{ github.run_number }}" \
+            --target "${{ github.sha }}" \
+            --title "okindo $ad" \
             --notes "Sanal telefonda açılış testini geçti. Telefona kurmak için aşağıdaki okindo.apk dosyasına dokun." \
             --latest

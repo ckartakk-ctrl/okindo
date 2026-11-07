@@ -9,6 +9,7 @@ export function tl(tutar: number | string | null | undefined): string {
 }
 
 const gunler = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
+const kisaGunler = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
 const aylar = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
 
 function iki(n: number) {
@@ -33,7 +34,7 @@ export function gunAdi(t: Date): string {
   yarin.setDate(bugun.getDate() + 1);
   if (t.toDateString() === bugun.toDateString()) return 'Bugün';
   if (t.toDateString() === yarin.toDateString()) return 'Yarın';
-  return `${gunler[t.getDay()].slice(0, 3)} ${t.getDate()}`;
+  return `${kisaGunler[t.getDay()]} ${t.getDate()}`;
 }
 
 export const durumMetni: Record<IsDurumu, string> = {

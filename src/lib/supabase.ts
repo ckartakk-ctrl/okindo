@@ -1,6 +1,8 @@
 import 'react-native-url-polyfill/auto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
+import { kullaniciMesaji } from './hata';
+import type { FonksiyonAdi, Veritabani } from './veritabaniTipi';
 
 const url = (process.env.EXPO_PUBLIC_SUPABASE_URL ?? '').trim();
 const anahtar = (process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '').trim();
@@ -16,7 +18,7 @@ export const ayarHatasi: string | null = !url
         ? `SUPABASE_KEY biçimi hatalı (${anahtar.length} karakter). Supabase > Project Settings > API sayfasındaki "anon public" anahtarı olmalı.`
         : null;
 
-export const supabase = createClient(ayarHatasi ? 'https://ayar-eksik.supabase.co' : url, ayarHatasi ? 'ayar-eksik' : anahtar, {
+export const supabase = createClient<Veritabani>(ayarHatasi ? 'https://ayar-eksik.supabase.co' : url, ayarHatasi ? 'ayar-eksik' : anahtar, {
   auth: {
     storage: AsyncStorage,
     autoRefreshToken: true,
@@ -26,14 +28,9 @@ export const supabase = createClient(ayarHatasi ? 'https://ayar-eksik.supabase.c
 });
 
 /** Veritabanı fonksiyonunu çağırır; hata varsa kullanıcıya gösterilecek Türkçe mesajla fırlatır. */
-export async function rpc<T = unknown>(ad: string, parametreler: Record<string, unknown> = {}): Promise<T> {
-  const { data, error } = await supabase.rpc(ad, parametreler);
-  if (error) {
-    // Veritabanının kendi Türkçe kural mesajları olduğu gibi gösterilir; teknik hatalar sade bir cümleye çevrilir
-    const teknik = /schema cache|function|permission denied|violates|syntax|JWT|relation|column|PGRST|fetch|network/i.test(error.message ?? '');
-    throw new Error(
-      !error.message || teknik ? 'Bu işlem şu an tamamlanamadı. Bağlantını kontrol edip tekrar dene; sorun sürerse okindo’ya yaz.' : error.message,
-    );
-  }
+export async function rpc<T = unknown>(ad: FonksiyonAdi, parametreler: Record<string, unknown> = {}): Promise<T> {
+  // Parametreler ekranlarda serbest nesne olarak verilir; adı ise tiplidir
+  const { data, error } = await supabase.rpc(ad, parametreler as never);
+  if (error) throw new Error(kullaniciMesaji(error.message));
   return data as T;
 }

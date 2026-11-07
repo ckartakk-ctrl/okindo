@@ -19,16 +19,19 @@ kaydını gösterir.
 | Puan, çaylak anketi, etiket askısı, "müşteri numaranı istedi mi?" sorusu | Hazır, test edildi |
 | Mesajlaşma (telefon, IBAN, e-posta otomatik gizlenir), acil düğmesi | Hazır, test edildi |
 | Yönetici ekranı: HV onayı, anlaşmazlık kararı (kısmi/tam iade) | Hazır |
+| Yönetici için iki adımlı doğrulama (K52) | Hazır, test edildi |
+| İş ekranında canlı güncelleme (karşı tarafın adımları, mesajlar) | Hazır |
+| Telefona anlık bildirim (push) | Kod hazır; EAS ve Firebase kurulumu gerekiyor (aşağıda) |
+| Gerçek SMS (Netgsm) | Kod hazır; Netgsm hesabı gerekiyor (aşağıda) |
+| Hata takibi (Sentry) | Kod hazır; Sentry DSN girilince açılır |
 | Zamanlayıcı: otomatik onay, gelmedi, 10 dk kuralı, düzenli işin sıradaki seansı | Hazır, test edildi |
 | **Ödeme** | **Test modunda.** Gerçek para çekilmez. iyzico bağlanacak yer hazır |
 
 ## Henüz olmayanlar (sonra eklenecek)
 
-- **Gerçek ödeme (iyzico).** `supabase/functions/odeme-isleyici` içinde yeri hazır. iyzico'nun yazılı onayı ve sandbox hesabı gerekiyor.
-- **Gerçek SMS (Netgsm).** Şimdilik Supabase'in test telefon numaralarıyla giriş yapılır (aşağıda 4. adım).
-- **Telefona anlık bildirim (push).** Bildirimler şimdilik uygulama içinde, "Hesabım > Bildirimler" ekranında görünür.
+- **Gerçek ödeme (iyzico).** `supabase/functions/odeme-isleyici` içinde yeri hazır. İşleyici kilitli çalışır ve aynı ödemeyi iki kez
+  çekmez (bkz. dosyanın başı). iyzico'nun yazılı onayı ve sandbox hesabı gerekiyor.
 - **Numara gizlemeli arama, e-arşiv fatura, kimlik doğrulama servisi.** Pilot öncesi teklif alınacak.
-- **Yönetici girişinde iki adımlı doğrulama (K52).** Gerçek müşteri işi açılmadan önce eklenmeli.
 - **Kategori kısa eğitimi (K39).** Askıya alınan etiketi şimdilik yönetici yeniden açar.
 
 ---
@@ -52,13 +55,47 @@ kaydını gösterir.
 
 ### 3. Veritabanını kur
 
-Supabase'de **SQL Editor**'ü aç. Aşağıdaki dosyaların içeriğini **bu sırayla** tek tek yapıştırıp **Run** de:
+**Önerilen yol: Supabase CLI.** Dosyaları elle yapıştırmak yerine hangi dosyanın kurulduğunu CLI takip eder:
+
+```bash
+npx supabase login
+npx supabase link --project-ref PROJE-KODUN
+npx supabase db push          # henüz kurulmamış migration dosyalarını sırayla kurar
+```
+
+> **Daha önce SQL Editor ile kurduysan** (pilot projesi böyle kuruldu), CLI'a hangilerinin zaten kurulu olduğunu bir kez söyle,
+> yoksa hepsini baştan kurmaya çalışır. Kurduğun dosyaların numaralarını yaz, örneğin 0001–0009 kuruluysa:
+>
+> ```bash
+> npx supabase migration repair --status applied 0001 0002 0003 0004 0005 0006 0007 0008 0009
+> npx supabase db push        # yalnız 0010 ve 0011 kurulur
+> ```
+>
+> `0011_sunucu_zamanlamalari.sql`'dan önce aşağıdaki "Sunucu zamanlamaları" adımındaki iki kasa değerini gir.
+
+Veritabanı değişince uygulamanın tiplerini yenile: `npm run tipler`.
+
+**Elle kurmak istersen:** Supabase'de **SQL Editor**'ü aç. Aşağıdaki dosyaların içeriğini **bu sırayla** tek tek yapıştırıp **Run** de:
 
 1. `supabase/migrations/0001_sema.sql`
 2. `supabase/migrations/0002_is_kurallari.sql`
 3. `supabase/migrations/0003_ornek_veri.sql`
 4. `supabase/migrations/0005_fotograf_deposu.sql`
 5. **Integrations > Cron** bölümünden Cron'u aç, sonra `supabase/migrations/0004_zamanlayici.sql`
+6. Kalan dosyalar numara sırasıyla: `0006` … `0011`
+
+### Sunucu zamanlamaları (0011 için)
+
+Ödeme işleyici her dakika, push bildirimi her yeni bildirimde veritabanından çağrılır. Bunun için SQL Editor'de bir kez
+(uzun rastgele metni kendin üret, ör. bir parola yöneticisiyle 40 karakter):
+
+```sql
+select vault.create_secret('https://PROJE-KODUN.supabase.co', 'proje_adresi');
+select vault.create_secret('UZUN-RASTGELE-METIN', 'zamanlayici_sirri');
+```
+
+Aynı metni sunucu fonksiyonlarına da ver: `npx supabase secrets set ZAMANLAYICI_SIRRI=UZUN-RASTGELE-METIN`.
+Bu sır olmadan `odeme-isleyici` ve `push-gonder` çağrılamaz (uygulamadaki herkese açık anahtarla çağrılamazlar).
 
 > 0003 dosyasındaki mahalleler ve fiyatlar **örnektir**. Gerçekleri belli olunca **Table Editor**'de `mahalleler` ve
 > `hizmetler` tablolarından değiştirebilirsin.
@@ -76,15 +113,15 @@ Supabase'de **SQL Editor**'ü aç. Aşağıdaki dosyaların içeriğini **bu sı
 Bilgisayarında bu klasörde bir terminal aç ve sırayla:
 
 ```bash
-npm install
-npx expo install expo@latest
-npx expo install --fix
+npm ci
 npx expo start
 ```
 
 Ekranda çıkan QR kodu telefonundaki **Expo Go** ile okut. Uygulama telefonunda açılır.
 
-> İkinci ve üçüncü satır, uygulamayı telefonundaki Expo Go sürümüyle uyumlu hale getirir. Bir şey sorarsa **Y** de.
+> `npm ci`, `package-lock.json`'daki sürümleri birebir kurar. Uygulama Expo SDK 53 kullanır; telefonundaki Expo Go
+> daha yeni bir SDK istiyorsa SDK yükseltmesi ayrı bir iş olarak yapılmalı (`npx expo install expo@^54` ve `--fix`, sonra test).
+> Push bildirim, Sentry gibi yerel modüller Expo Go'da tam çalışmaz; onları APK ile dene.
 
 ### 6. Kendini yönetici yap
 
@@ -96,17 +133,32 @@ update public.profiller set yonetici = true where telefon = '905300000001';
 ```
 
 3. Uygulamada **Hesabım > Yönetici paneli** görünür.
+4. Panele ilk girişte **iki adımlı doğrulama** kurulur: telefondaki Google Authenticator ya da Microsoft Authenticator'a
+   okindo eklenir. Sonraki girişlerde 6 haneli kod sorulur. Supabase'de **Authentication > Multi-Factor** bölümünde
+   **TOTP** açık olmalı (varsayılan olarak açıktır).
+
+> Doğrulama telefonunu kaybedersen: SQL Editor'de geçici olarak kapat
+> (`update ayarlar set deger = '0' where anahtar = 'yonetici_iki_adim';`), **Authentication > Users** içinde
+> kendi kullanıcının MFA faktörünü sil, sonra ayarı yeniden `'1'` yap.
 
 ### APK'yı telefondan derle (GitHub)
 
-Bilgisayar gerekmez. Bu depoya her değişiklik yüklendiğinde GitHub, APK'yı kendisi derler.
+Bilgisayar gerekmez. Her değişiklikte yalnız hızlı kontroller çalışır (**Actions > Kontrol**, birkaç dakika).
+APK, uzun sürdüğü için (20–30 dakika) yalnız istendiğinde derlenir:
 
-1. GitHub'da bu depoda **Settings > Secrets and variables > Actions > New repository secret** ile iki değer ekle:
-   - `SUPABASE_URL` → Supabase Project URL
-   - `SUPABASE_KEY` → Supabase anon public anahtarı
-2. **Actions** sekmesinde "Android APK" işinin bitmesini bekle (yaklaşık 20–30 dakika). Yeşil tik = hazır.
-3. Deponun ana sayfasında **Releases** bölümüne gir, en üstteki sürümde **okindo.apk**'ya dokun, indir ve kur.
-4. Yeniden derlemek için: **Actions > Android APK > Run workflow**.
+1. **Actions > Android APK > Run workflow**, ya da bir sürüm etiketi koy (ör. GitHub'da **Releases > Draft a new release**,
+   etiket `v0.6.0`).
+2. Yeşil tik = hazır. Deponun **Releases** bölümünde en üstteki sürümde **okindo.apk**'ya dokun, indir ve kur.
+
+Supabase adresi ve anahtarı iş akışında pilot projesine ayarlı. Başka projeye geçmek için
+**Settings > Secrets and variables > Actions > Variables** bölümüne `SUPABASE_URL` ve `SUPABASE_ANON_KEY` ekle.
+Hata takibi için aynı yere `SENTRY_DSN` ekle.
+
+### Play Store ve anında güncelleme (EAS)
+
+Play Store'a yüklemek için `.aab` dosyası gerekir; bunu Expo'nun bulut derlemesi (EAS) üretir. EAS ayrıca yalnız
+JavaScript değişikliklerini APK derlemeden telefonlara gönderebilir. Kurulum ve kullanım `.github/workflows/eas.yml`
+dosyasının başında yazıyor (expo.dev hesabı ve `EXPO_TOKEN` gerekir). Push bildirim de EAS proje numarası ister.
 
 ### 7. Sunucu fonksiyonlarını yükle
 
@@ -117,7 +169,33 @@ npx supabase login
 npx supabase link --project-ref PROJE-KODUN
 npx supabase functions deploy hesap-sil
 npx supabase functions deploy odeme-isleyici
+npx supabase functions deploy push-gonder
+npx supabase functions deploy sms-gonder
 ```
+
+JWT ayarları `supabase/config.toml` içindedir; `odeme-isleyici`, `push-gonder` ve `sms-gonder` kendi sırlarıyla korunur.
+
+### 8. Telefona anlık bildirim (push)
+
+1. EAS kurulumunu yap (yukarıda "Play Store ve anında güncelleme"); `npx eas-cli init` app.json'a proje numarasını yazar.
+2. Android için Firebase'de proje aç, FCM V1 hizmet hesabı anahtarını `npx eas-cli credentials` ile EAS'e yükle
+   (Expo belgesi: "Push notifications setup").
+3. "Sunucu zamanlamaları" adımını yaptıysan başka bir şey gerekmez: uygulama girişte bildirim izni ister, her yeni
+   bildirim telefona da gider, dokununca ilgili iş açılır.
+
+### 9. Gerçek SMS (Netgsm)
+
+1. Netgsm'de hesap ve onaylı SMS başlığı (ör. `OKINDO`) al.
+2. Supabase > **Authentication > Hooks > Send SMS hook**: tür HTTPS, adres
+   `https://PROJE-KODUN.supabase.co/functions/v1/sms-gonder`, **Generate secret**.
+3. `npx supabase secrets set SEND_SMS_HOOK_SECRET="v1,whsec_..." NETGSM_KULLANICI=... NETGSM_SIFRE=... NETGSM_BASLIK=OKINDO`
+4. Test numaralarını sil; artık giriş kodu gerçek SMS ile gider.
+
+### 10. Hata takibi (Sentry)
+
+Sentry'de React Native projesi aç, verilen DSN adresini `.env` dosyasına `EXPO_PUBLIC_SENTRY_DSN=` olarak (GitHub'da
+`SENTRY_DSN` değişkeni olarak) yaz. Boşsa hiçbir şey gönderilmez. Telefon numarası ve ad gönderilmez, yalnız kullanıcı
+kimlik numarası.
 
 `PROJE-KODUN`, Supabase adresindeki `https://PROJE-KODUN.supabase.co` kısmıdır.
 
@@ -155,16 +233,20 @@ app/                      Ekranlar (her dosya bir ekran)
 src/components/           Ortak parçalar (düğme, kart, fiyat kartı…)
 src/lib/                  Supabase bağlantısı, oturum, biçimlendirme
 supabase/migrations/      Veritabanı ve iş kuralları (fiyat, para, güvenlik burada)
-supabase/functions/       Sunucu fonksiyonları (ödeme, hesap silme)
-tests/                    Veritabanı senaryo testleri (75 test)
+src/components/ui/       Arayüz parçaları, konu konu (tema, düğme, kart…); '@/components/ui' ile alınır
+src/components/is/       İş ekranının sekmeleri (müşteri, HV, mesajlar, fotoğraflar, ayrıntılar)
+src/lib/veritabani.ts    Veritabanı tipleri (otomatik üretilir: npm run tipler)
+supabase/functions/      Sunucu fonksiyonları (ödeme, hesap silme, push, SMS)
+tests/                    Veritabanı senaryo testleri (104 test) ve birim testleri (tests/birim)
 ```
 
 ## Testler (yazılımcı için)
 
-İş kuralları yerel bir Postgres'te test edilir:
+Hepsi her değişiklikte GitHub'da da çalışır (**Actions > Kontrol**).
 
 ```bash
-PGHOST=/tmp PGPORT=5432 PGUSER=postgres ./tests/testleri_calistir.sh
+npm run kontrol                                              # tip kontrolü + lint + birim testleri
+PGHOST=/tmp PGPORT=5432 PGUSER=postgres npm run db-test      # iş kuralları, yerel bir Postgres'te
 ```
 
 Testler fiyatı, indirimleri, kapı kodunu, ek işi, para dağılımını, gelmeme ve evde yok durumlarını, iptal ücretlerini,

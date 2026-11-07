@@ -6,7 +6,11 @@ import { useEffect, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Dugme, renk, stil, yazi, Yukleniyor } from '@/components/ui';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { bildirimDokunusunuDinle } from '@/lib/bildirim';
+import { hataKaydet, hataTakibiSar } from '@/lib/hataTakibi';
 import { OturumSaglayici, useOturum } from '@/lib/oturum';
+import { sorguIstemcisi } from '@/lib/sorgu';
 import { ayarHatasi } from '@/lib/supabase';
 import { yaziTipleri } from '@/lib/yazitipi';
 
@@ -28,6 +32,7 @@ function HataEkrani({ baslik, mesaj, tekrar }: { baslik: string; mesaj: string; 
 
 /** expo-router: ekranlardan birinde hata olursa bu gösterilir */
 export function ErrorBoundary({ error, retry }: { error: Error; retry: () => void }) {
+  useEffect(() => hataKaydet(error, { yer: 'ErrorBoundary' }), [error]);
   return <HataEkrani baslik="Bir hata oluştu" mesaj={`${error.name}: ${error.message}`} tekrar={retry} />;
 }
 
@@ -47,6 +52,8 @@ function Yonlendirici() {
       router.replace('/');
     }
   }, [hazir, oturum, profil, bolumler, router]);
+
+  useEffect(() => (oturum ? bildirimDokunusunuDinle() : undefined), [oturum]);
 
   if (!hazir) return <Yukleniyor />;
 
@@ -77,7 +84,7 @@ function Yonlendirici() {
   );
 }
 
-export default function KokDuzen() {
+function KokDuzen() {
   const [sonHata, setSonHata] = useState<string | null>(null);
   // Yazı tipi yüklenemese bile uygulama sistem yazısıyla açılır
   const [yaziHazir, yaziHatasi] = useFonts(yaziTipleri);
@@ -114,9 +121,13 @@ export default function KokDuzen() {
 
   return (
     <SafeAreaProvider>
-      <OturumSaglayici>
-        <Yonlendirici />
-      </OturumSaglayici>
+      <QueryClientProvider client={sorguIstemcisi}>
+        <OturumSaglayici>
+          <Yonlendirici />
+        </OturumSaglayici>
+      </QueryClientProvider>
     </SafeAreaProvider>
   );
 }
+
+export default hataTakibiSar(KokDuzen);

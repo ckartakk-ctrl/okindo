@@ -1,0 +1,63 @@
+name: EAS (Play Store derlemesi ve anında güncelleme)
+
+# Expo'nun bulut derleme servisi. Kullanmak için bir kez:
+#   1. expo.dev'de hesap aç, bilgisayarda: npx eas-cli login && npx eas-cli init   (app.json'a proje numarası yazılır)
+#   2. npx eas-cli update:configure                                               (anında güncelleme için)
+#   3. expo.dev > Access tokens ile jeton üret, GitHub > Settings > Secrets > Actions'a EXPO_TOKEN adıyla ekle
+# Sonra Actions > "EAS" > Run workflow ile:
+#   - "derleme": Play Store için .aab (production) ya da telefona kurulacak .apk (preview)
+#   - "guncelleme": yalnız JavaScript değişikliklerini APK derlemeden kullanıcı telefonlarına gönderir
+on:
+  workflow_dispatch:
+    inputs:
+      islem:
+        description: Ne yapılsın?
+        type: choice
+        options: [guncelleme, derleme]
+        default: guncelleme
+      profil:
+        description: Profil (preview = test telefonları, production = Play Store)
+        type: choice
+        options: [preview, production]
+        default: preview
+      mesaj:
+        description: Güncelleme notu (yalnız "guncelleme" için)
+        type: string
+        default: ''
+
+jobs:
+  eas:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    steps:
+      - name: EXPO_TOKEN var mı
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "::error title=EXPO_TOKEN eksik::Bu iş akışının başındaki kurulum adımlarını yap."
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Derleme
+        if: inputs.islem == 'derleme'
+        run: eas build --platform android --profile "${{ inputs.profil }}" --non-interactive --no-wait
+      - name: Anında güncelleme
+        if: inputs.islem == 'guncelleme'
+        env:
+          EXPO_PUBLIC_SUPABASE_URL: ${{ vars.SUPABASE_URL || 'https://taqrdphgahadaiageaon.supabase.co' }}
+          EXPO_PUBLIC_SENTRY_DSN: ${{ vars.SENTRY_DSN || '' }}
+        run: |
+          # Anahtar eas.json'daki profil değeriyle aynıdır
+          export EXPO_PUBLIC_SUPABASE_ANON_KEY="${{ vars.SUPABASE_ANON_KEY }}"
+          [ -n "$EXPO_PUBLIC_SUPABASE_ANON_KEY" ] || export EXPO_PUBLIC_SUPABASE_ANON_KEY=$(node -p "require('./eas.json').build.base.env.EXPO_PUBLIC_SUPABASE_ANON_KEY")
+          eas update --channel "${{ inputs.profil }}" --message "${{ inputs.mesaj || github.sha }}" --non-interactive
