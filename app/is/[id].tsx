@@ -29,7 +29,7 @@ import {
   yazi,
   Yukleniyor,
 } from '@/components/ui';
-import { durumMetni, hvDurumMetni, saatMetni, tl, zaman } from '@/lib/bicim';
+import { durumMetni, GUVENCE_TL, hvDurumMetni, saatMetni, tl, zaman } from '@/lib/bicim';
 import { fotoCekVeYukle } from '@/lib/foto';
 import { useOturum } from '@/lib/oturum';
 import { rpc, supabase } from '@/lib/supabase';
@@ -310,7 +310,7 @@ function MusteriDurum({ veri, eylem }: { veri: Veri; eylem: Eylem }) {
             {veri.kod}
           </Text>
           <Metin soluk kucuk ortali>
-            Kod girilince iş başlar ve sigorta kapsamı açılır.
+            {`Kod girilince iş başlar ve ${tl(GUVENCE_TL)}’ye kadar okindo güvencesi açılır.`}
           </Metin>
         </Kart>
       ) : null}
@@ -338,7 +338,7 @@ function MusteriDurum({ veri, eylem }: { veri: Veri; eylem: Eylem }) {
             style={({ pressed }) => [{ padding: bosluk.l, flexDirection: 'row', alignItems: 'center', gap: bosluk.s }, pressed && { backgroundColor: '#F2F6F5' }]}
           >
             <View style={{ flex: 1 }}>
-              <HvKartGorunumu kart={hv} sigortali={['basladi', 'bitti'].includes(is.durum)} />
+              <HvKartGorunumu kart={hv} guvenceli={['basladi', 'bitti'].includes(is.durum)} />
             </View>
             <Simge ad="chevron-forward" boyut={20} renkli={renk.silik} />
           </Pressable>
@@ -610,7 +610,7 @@ function HvDurum({ veri, eylem }: { veri: Veri; eylem: Eylem }) {
       {is.durum === 'adreste' ? (
         <Kart vurgu="ana">
           <Text style={stil.altBaslik}>Kapı kodunu gir</Text>
-          <Metin>Müşteriden 4 haneli kodu iste. Kod girilmeden iş başlamış sayılmaz ve sigorta kapsamı açılmaz.</Metin>
+          <Metin>Müşteriden 4 haneli kodu iste. Kod girilmeden iş başlamış sayılmaz ve okindo güvencesi açılmaz.</Metin>
           <Girdi etiket="Kapı kodu" keyboardType="number-pad" maxLength={4} value={kod} onChangeText={setKod} style={{ fontSize: 24, letterSpacing: 8, fontWeight: '600' }} />
           <Dugme eksik={kod.length !== 4 ? 'Kod 4 haneli olmalı.' : null} onPress={() => eylem('kapi_kodu_gir', { p_is: is.id, p_kod: kod })}>
             İşe başla

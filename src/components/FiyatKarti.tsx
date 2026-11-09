@@ -1,5 +1,5 @@
 import { Text, View } from 'react-native';
-import { tl } from '@/lib/bicim';
+import { GUVENCE_TL, tl } from '@/lib/bicim';
 import type { FiyatDokumu } from '@/lib/tipler';
 import { Ayirici, BilgiSatiri, Kart, renk, Satir, Tutar } from './ui';
 
@@ -40,6 +40,7 @@ export function FiyatKarti({ fiyat }: { fiyat: FiyatDokumu }) {
             ? 'İş uzasa da fiyat değişmez. Yalnız senin onayladığın ek iş değiştirir.'
             : 'Süre senin onayın olmadan uzamaz.'}
         </BilgiSatiri>
+        <BilgiSatiri simge="shield-checkmark-outline">{`İş sırasında evinde oluşan hasar ${tl(GUVENCE_TL)}’ye kadar okindo güvencesinde.`}</BilgiSatiri>
         <BilgiSatiri simge="cube-outline">Malzeme fiyata dahil değildir.</BilgiSatiri>
         <BilgiSatiri simge="home-outline">Evde olmazsan {tl(fiyat.cikis_ucreti_kd)} çıkış ücreti alınır.</BilgiSatiri>
       </View>

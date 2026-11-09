@@ -39,7 +39,7 @@ const bolumler: { baslik: string; kartlar: string[] }[] = [
     baslik: 'Uygulama akışı',
     kartlar: [
       'Adrese varınca “Adrese vardım”a bas. Bu kayıt, müşteri evde yoksa seni korur.',
-      'Kapıda müşteriden 4 haneli kodu iste ve gir. Kod girilmeden iş başlamaz ve sigorta kapsamı açılmaz.',
+      'Kapıda müşteriden 4 haneli kodu iste ve gir. Kod girilmeden iş başlamaz ve okindo güvencesi açılmaz.',
       'Ek iş çıkarsa uygulamadan ekle; müşteri onaylamadan yapma. Bitince istersen fotoğraf çek ve “İşi bitir”e bas.',
     ],
   },
@@ -47,8 +47,8 @@ const bolumler: { baslik: string; kartlar: string[] }[] = [
     baslik: 'Para ve kurallar',
     kartlar: [
       'Paran müşteri onaylayınca hesabına gönderilir. Bonuslar bir sonraki iş ödemenle ya da en geç hafta sonunda ödenir.',
-      'Bu müşteriyi sana okindo getirdi; sigortan, ödeme güvencen ve yeni müşterilerin bu kurala bağlı: okindo’dan tanıştığın müşteriyle 12 ay uygulama dışında iş yapılmaz.',
-      'Müşteri numaranı isterse: “Ben işlerimi okindo sayesinde alıyorum. Uygulamadan beni seçin, iş direkt bana gelir; aynı fiyat ve sigortalı.”',
+      'Bu müşteriyi sana okindo getirdi; hasar güvencen, ödeme güvencen ve yeni müşterilerin bu kurala bağlı: okindo’dan tanıştığın müşteriyle 12 ay uygulama dışında iş yapılmaz.',
+      'Müşteri numaranı isterse: “Ben işlerimi okindo sayesinde alıyorum. Uygulamadan beni seçin, iş direkt bana gelir; aynı fiyat ve okindo güvencesiyle.”',
     ],
   },
 ];

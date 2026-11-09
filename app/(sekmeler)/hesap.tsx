@@ -83,7 +83,7 @@ export default function Hesap() {
             <View style={{ flex: 1, gap: 4 }}>
               <Text style={[stil.altBaslik, { color: '#FFFFFF' }]}>okindo’da iş al</Text>
               <Text style={[stil.ikincil, { color: '#CFE9E2' }]}>
-                Elinden gelen işi, mahallende kayıtlı ve sigortalı ek gelire çevir.
+                Elinden gelen işi, mahallende kayıtlı ve güvenceli ek gelire çevir.
               </Text>
             </View>
             <Simge ad="arrow-forward-circle" boyut={32} renkli={renk.damga} />

@@ -2,6 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import { Avatar, BilgiSatiri, Bos, bosluk, Dugme, Ekran, Grup, GrupSatiri, Kart, renk, Rozet, Simge, stil, Tutar, Yukleniyor } from '@/components/ui';
+import { GUVENCE_TL, tl } from '@/lib/bicim';
 import { profilFotoAdresi } from '@/lib/foto';
 import { rpc } from '@/lib/supabase';
 import type { HvProfili } from '@/lib/tipler';
@@ -78,7 +79,7 @@ export default function HvProfilEkrani() {
         <Text style={stil.altBaslik}>Neden güvenebilirsin?</Text>
         <BilgiSatiri simge="people-outline">okindo ekibi bu kişiyle yüz yüze görüştü ve yaptığı işten küçük bir uygulama gördü.</BilgiSatiri>
         <BilgiSatiri simge="document-text-outline">e-Devlet barkodlu adli sicil kaydı kontrol edildi, 6 ayda bir yenilenir.</BilgiSatiri>
-        <BilgiSatiri simge="shield-checkmark-outline">Kapı kodu girildiği andan iş bitene kadar sigortalı.</BilgiSatiri>
+        <BilgiSatiri simge="shield-checkmark-outline">{`Kapı kodu girildiği andan iş bitene kadar evinde oluşan hasar ${tl(GUVENCE_TL)}’ye kadar okindo güvencesinde.`}</BilgiSatiri>
         <BilgiSatiri simge="calendar-outline">{`${aylar[uye.getMonth()]} ${uye.getFullYear()} tarihinden beri okindo’da.`}</BilgiSatiri>
       </Kart>
 

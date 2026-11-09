@@ -648,7 +648,7 @@ begin
   end if;
   update public.isler set durum = 'basladi', basladi_at = now() where id = p_is;
   perform public.bildir(i.musteri_id, 'İş başladı',
-    public.ad_kisa(i.hv_id) || ' şu an evinde ve sigortalı. Ek iş istersen buradan ekle.', p_is);
+    public.ad_kisa(i.hv_id) || ' şu an evinde; iş okindo güvencesi altında. Ek iş istersen buradan ekle.', p_is);
 end $$;
 
 -- K23: kod girilmediyse müşteri "içeride" onayı verir
@@ -1074,7 +1074,7 @@ begin
        where pu.alan_id = i.musteri_id and pu.yon = 'hv_musteri' and pu.numara_istedi
          and pu.olusturma_at > now() - interval '90 days';
       if v_say = 2 then
-        perform public.bildir(i.musteri_id, 'Küçük bir hatırlatma', 'Uygulama dışında yapılan işler sigortasız ve güvencesizdir.');
+        perform public.bildir(i.musteri_id, 'Küçük bir hatırlatma', 'Uygulama dışında yapılan işler okindo güvencesi dışındadır.');
       elsif v_say = 3 then
         insert into public.anlasmazliklar (is_id, tur, aciklama) values (p_is, 'platform_disi', 'Müşteri için 3 farklı HV numara istendiğini bildirdi.');
         perform public.yoneticilere_bildir('Platform dışı iş şüphesi', 'Bir müşteri için 3 farklı bildirim geldi.', p_is);
@@ -1417,7 +1417,7 @@ begin
              and adreste_at < now() - make_interval(mins => public.ayar_num('kapi_kodu_hatirlatma_dk')::int) loop
     update public.isler set icerde_sorusu_at = now() where id = r.id;
     perform public.bildir(r.musteri_id, public.ad_kisa(r.hv_id) || ' içeride mi?',
-      'İçerideyse uygulamadan "Evet" de; iş başlasın ve sigorta kapsamı açılsın.', r.id);
+      'İçerideyse uygulamadan "Evet" de; iş başlasın ve okindo güvencesi açılsın.', r.id);
   end loop;
 
   -- 7. Otomatik onay (K26)

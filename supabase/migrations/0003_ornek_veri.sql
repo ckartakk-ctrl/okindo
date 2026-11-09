@@ -112,6 +112,6 @@ insert into public.egitim_sorulari (sira, soru, secenekler, dogru) values
   (3, 'Bir iş sana riskli göründü (örneğin gaz bağlantısı). Ne yaparsın?',
       '["Dikkatlice denerim", "\"Emin değilsen yapma\": işi bırakır, \"yapılamadı – riskli\" seçerim", "Arkadaşımı çağırırım"]', 1),
   (4, 'Müşteri telefon numaranı istedi. Ne dersin?',
-      '["Veririm", "\"Uygulamadan beni seçin, iş direkt bana gelir; aynı fiyat ve sigortalı\" derim", "Instagram hesabımı veririm"]', 1),
+      '["Veririm", "\"Uygulamadan beni seçin, iş direkt bana gelir; aynı fiyat ve okindo güvencesiyle\" derim", "Instagram hesabımı veririm"]', 1),
   (5, 'İş bittiğinde ne yaparsın?',
       '["Hemen çıkarım", "Bitiş fotoğrafını çeker, işi müşteriye gösterir, \"Bitti\"ye basarım", "Ödemeyi nakit isterim"]', 1);

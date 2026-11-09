@@ -4,7 +4,7 @@ import type { HvKarti } from '@/lib/tipler';
 import { Avatar, bosluk, renk, Rozet, Simge, stil, yazi } from './ui';
 
 /** Gelecek kişinin kartı: fotoğraf, ad, puan, iş sayısı, rozetler */
-export function HvKartGorunumu({ kart, sigortali }: { kart: HvKarti; sigortali?: boolean }) {
+export function HvKartGorunumu({ kart, guvenceli }: { kart: HvKarti; guvenceli?: boolean }) {
   return (
     <View style={{ flexDirection: 'row', gap: bosluk.m, alignItems: 'center' }}>
       <Avatar ad={kart.ad} foto={profilFotoAdresi(kart.foto_yolu)} boyut={56} onayli />
@@ -16,10 +16,10 @@ export function HvKartGorunumu({ kart, sigortali }: { kart: HvKarti; sigortali?:
             {kart.puan ? kart.puan.toString().replace('.', ',') : 'Yeni'}, {kart.is_sayisi} iş{kart.mahalle ? `, ${kart.mahalle}` : ''}
           </Text>
         </View>
-        {kart.kurucu || sigortali ? (
+        {kart.kurucu || guvenceli ? (
           <View style={{ flexDirection: 'row', gap: bosluk.s, flexWrap: 'wrap', marginTop: bosluk.xs }}>
             {kart.kurucu ? <Rozet tur="damga">Kurucu</Rozet> : null}
-            {sigortali ? <Rozet>Bu işte sigortalı</Rozet> : null}
+            {guvenceli ? <Rozet>okindo güvencesinde</Rozet> : null}
           </View>
         ) : null}
       </View>

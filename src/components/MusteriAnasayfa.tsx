@@ -2,7 +2,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Bos, bosluk, Dugme, Ekran, Grup, GrupSatiri, OkDamgasi, renk, Rozet, Simge, stil, UstBlok, yazi, type SimgeAdi } from '@/components/ui';
-import { bitmisDurumlar, durumMetni, zaman } from '@/lib/bicim';
+import { bitmisDurumlar, durumMetni, GUVENCE_TL, tl, zaman } from '@/lib/bicim';
 import { useOturum } from '@/lib/oturum';
 import { supabase } from '@/lib/supabase';
 import type { Hizmet, Is, Kategori } from '@/lib/tipler';
@@ -266,7 +266,7 @@ export function MusteriAnasayfa() {
         <View style={{ flex: 1, gap: bosluk.xs }}>
           <Text style={[stil.metin, { fontWeight: '600' }]}>Gelen kişiyi tanıyoruz</Text>
           <Text style={[stil.ikincil, { color: renk.soluk }]}>
-            Herkesle yüz yüze görüştük, sicilini kontrol ettik. Fiyatı baştan görürsün, iş sırasında sigortalıdır.
+            {`Herkesle yüz yüze görüştük, sicilini kontrol ettik. Fiyatı baştan görürsün; iş sırasında evinde oluşan hasar ${tl(GUVENCE_TL)}’ye kadar okindo güvencesinde.`}
           </Text>
         </View>
       </View>

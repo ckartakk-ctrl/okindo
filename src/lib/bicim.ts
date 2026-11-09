@@ -64,3 +64,6 @@ export function saatMetni(saat: number | null): string {
   const tam = Math.floor(saat);
   return saat % 1 === 0 ? `${tam} saat` : `${tam} saat 30 dk`;
 }
+
+/** okindo güvencesi: kapı kodu girildiği andan iş onaylanana kadar evde oluşan hasarın üst sınırı (TL) */
+export const GUVENCE_TL = 2500;
