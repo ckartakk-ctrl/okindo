@@ -1,0 +1,22 @@
+01-giris: tamam
+02-musteri-anasayfa: tamam
+04-musteri-islerim: tamam
+05-musteri-is-detay: tamam
+05b-is-mesajlar: tamam
+[05300000001] konsol: Failed to load resource: the server responded with a status of 400 ()
+05c-is-fotograflar: tamam
+05d-is-ayrintilar: tamam
+05e-hv-profili: tamam
+05f-talep: tamam
+05g-hv-basvuru: tamam
+06-musteri-hesap: tamam
+07-bildirimler: tamam
+08-adres-ekle: tamam
+09-yonetici: tamam
+10-hv-talepler: tamam
+11-hv-islerim: tamam
+12-hv-is-detay: tamam
+13-hv-kazanc: tamam
+14-hv-hesap: tamam
+15-egitim: tamam
+16-egitim-test: tamam
